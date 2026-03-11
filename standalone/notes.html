@@ -5,45 +5,346 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POF 2828 — Notes</title>
 <style>
-:root{--bg:#0B0C0F;--surface:#11131A;--surface2:#181B26;--border:rgba(244,246,255,.08);--text:#F4F6FF;--muted:#8A8F9E;--gold:#F2C94C;--green:#4ECB71;--blue:#4F8EF7;--purple:#9B7FE8;}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:13px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column}
-.header{padding:12px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:8px}
-.brand{font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:var(--gold)}
-.actions{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px}.btn.primary{background:var(--gold);color:#111;border-color:var(--gold)}
-.main{display:grid;grid-template-columns:280px 1fr;flex:1;min-height:0}
-.sidebar{border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0}
-.search{margin:10px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text)}
-.list{overflow:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
-.card{border:1px solid var(--border);background:var(--surface2);border-radius:8px;padding:8px;cursor:pointer}.card.active{border-color:var(--gold)}.meta{font-size:10px;color:var(--muted)}
-.editor{display:flex;flex-direction:column;min-height:0}.row{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border)}
-.inp,textarea{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font:inherit} textarea{flex:1;resize:none}
-.preview{display:none;overflow:auto;padding:12px}.preview.on{display:block}.editor-body{display:flex;flex:1;min-height:0}.editor-body textarea.off{display:none}
-.toast{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--gold);padding:8px 10px;border-radius:6px;font:11px monospace;color:var(--gold);opacity:0;transition:.2s}.toast.show{opacity:1}
-@media (max-width:900px){.main{grid-template-columns:1fr}.sidebar{max-height:40vh}}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #08080c;
+    --pane: #0e0e14;
+    --card: #13131b;
+    --card-hover: #171721;
+    --card-selected: #161625;
+    --border: #1c1c28;
+    --border-sel: #2d2d48;
+    --text: #b8bcc6;
+    --text-secondary: #6a6a80;
+    --bright: #dde0e8;
+    --gold: #e8a912;
+    --gold-dim: rgba(232, 169, 18, .12);
+    --green: #2ecc8e;
+    --green-dim: rgba(46, 204, 142, .10);
+    --red: #d44;
+    --cyan: #4ac4d4;
+    --cyan-dim: rgba(74, 196, 212, .08);
+    --purple: #8070c8;
+    --purple-dim: rgba(128, 112, 200, .08);
+    --font: 'DM Mono', 'Menlo', monospace;
+    --fs: 13px;
+    --lh: 1.55;
+    --radius: 6px;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #222230; border-radius: 3px; }
+
+  body {
+    font-family: var(--font);
+    font-size: var(--fs);
+    line-height: var(--lh);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ───────── TOPBAR ───────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--pane);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .brand-name { font-weight: 500; color: var(--gold); letter-spacing: 2px; }
+  .brand-label { color: var(--text-secondary); letter-spacing: 1px; }
+  .topbar-sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+  .topbar-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; flex-wrap: wrap; }
+  .top-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-secondary); padding: 6px 12px;
+    border-radius: var(--radius); font: inherit; cursor: pointer;
+    transition: all .12s; white-space: nowrap;
+  }
+  .top-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .top-btn.primary {
+    background: var(--gold); color: #000;
+    border-color: var(--gold); font-weight: 500;
+  }
+  .top-btn.primary:hover { filter: brightness(1.1); }
+  .top-btn.green-btn {
+    background: var(--green-dim); color: var(--green);
+    border-color: rgba(46, 204, 142, .25);
+  }
+  .top-btn.green-btn:hover { background: rgba(46, 204, 142, .18); }
+
+  /* ───────── TWO-PANE BODY ───────── */
+  .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+  /* LEFT: NOTE LIST */
+  .list-pane {
+    width: 320px;
+    min-width: 260px;
+    max-width: 40%;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  .search-wrap { padding: 10px; }
+  .search-input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: #2e2e3e; }
+
+  .note-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card {
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .1s;
+  }
+  .card:hover { background: var(--card-hover); border-color: var(--border-sel); }
+  .card.selected {
+    background: var(--card-selected);
+    border-color: var(--border-sel);
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
+  .card-title {
+    font-weight: 500;
+    color: var(--bright);
+    margin-bottom: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card-preview {
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 2px 8px;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    border: 1px solid rgba(74, 196, 212, .15);
+    border-radius: 3px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .pin-badge {
+    padding: 2px 8px;
+    background: var(--gold-dim);
+    color: var(--gold);
+    border-radius: 3px;
+    font-size: 11px;
+  }
+  .card-time { margin-left: auto; color: #2e2e3e; font-size: 11px; }
+
+  /* RIGHT: EDITOR */
+  .editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--pane);
+    overflow: hidden;
+  }
+  .editor-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .editor-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+    color: var(--bright);
+    font: inherit;
+    font-weight: 500;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .editor-input:focus { border-color: var(--gold); }
+  .tags-input {
+    width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .tags-input:focus { border-color: var(--gold); }
+  .editor-actions {
+    display: flex;
+    gap: 6px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ed-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font: inherit;
+    cursor: pointer;
+    transition: all .1s;
+  }
+  .ed-btn:hover { border-color: #3a3a50; color: var(--text); }
+  .ed-btn.active { background: var(--purple-dim); border-color: rgba(128, 112, 200, .25); color: var(--purple); }
+  .ed-btn.green-btn {
+    background: var(--green-dim);
+    border-color: rgba(46, 204, 142, .25);
+    color: var(--green);
+  }
+  .ed-btn.green-btn:hover { background: rgba(46, 204, 142, .18); }
+  .ed-btn.danger { color: var(--red); border-color: rgba(221, 68, 68, .25); }
+  .ed-btn.danger:hover { background: rgba(221, 68, 68, .08); }
+
+  .editor-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .editor-body textarea {
+    flex: 1;
+    background: var(--bg);
+    border: none;
+    color: var(--text);
+    font: inherit;
+    line-height: 1.7;
+    padding: 20px 24px;
+    resize: none;
+    outline: none;
+  }
+  .editor-body textarea.off { display: none; }
+  .preview {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .preview.on { display: block; }
+  .preview h1, .preview h2, .preview h3 { color: var(--bright); margin: 12px 0 6px; }
+  .preview h1 { font-size: 18px; }
+  .preview h2 { font-size: 16px; }
+  .preview h3 { font-size: 14px; }
+  .preview strong { color: var(--bright); }
+  .preview code {
+    background: var(--card); padding: 2px 6px;
+    border-radius: 3px; font-size: 12px;
+  }
+
+  .list-empty { text-align: center; padding: 40px 16px; color: #2e2e3e; }
+
+  /* ───────── TOAST ───────── */
+  .toast {
+    position: fixed; bottom: 18px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--gold); color: #000;
+    padding: 7px 22px; border-radius: 5px;
+    font-weight: 500; letter-spacing: 1.5px;
+    z-index: 200; transition: transform .18s ease; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ───────── MOBILE ───────── */
+  @media (max-width: 720px) {
+    .list-pane { width: 100%; max-width: 100%; border-right: none; }
+    .editor-pane { display: none; }
+    .body-wrap.editor-open .list-pane { display: none; }
+    .body-wrap.editor-open .editor-pane { display: flex; }
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <div class="brand">POF 2828 · NOTES</div>
-  <div class="actions">
-    <button class="btn" onclick="createNote()">+ New</button>
-    <button class="btn" onclick="sendToClipboard()">Send to Clipboard</button>
-    <button class="btn" onclick="exportMarkdown()">Export .md</button>
-    <button class="btn" onclick="exportJSON()">Export JSON</button>
-    <button class="btn" onclick="importJSON()">Import JSON</button>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-name">POF 2828</span>
+    <span class="brand-label">Notes</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-actions">
+    <button class="top-btn primary" onclick="createNote()">+ New</button>
+    <button class="top-btn green-btn" onclick="sendToClipboard()">Send to Clipboard</button>
+    <button class="top-btn" onclick="exportMarkdown()">Export .md</button>
+    <button class="top-btn" onclick="exportJSON()">Export JSON</button>
+    <button class="top-btn" onclick="importJSON()">Import JSON</button>
   </div>
 </div>
-<div class="main">
-  <aside class="sidebar">
-    <input class="search" id="search" placeholder="Search notes/tags..." oninput="renderList()">
-    <div class="list" id="list"></div>
-  </aside>
-  <section class="editor">
-    <div class="row">
-      <input id="title" class="inp" style="flex:1" placeholder="Title (auto from first line)">
-      <input id="tags" class="inp" style="width:220px" placeholder="tags, comma">
-      <button class="btn" onclick="togglePin()">Pin</button>
-      <button class="btn primary" onclick="togglePreview()">Preview</button>
+
+<div class="body-wrap" id="bodyWrap">
+  <div class="list-pane">
+    <div class="search-wrap">
+      <input class="search-input" id="search" placeholder="Search notes / tags..." oninput="renderList()">
+    </div>
+    <div class="note-list" id="list"></div>
+  </div>
+  <section class="editor-pane" id="editorPane">
+    <div class="editor-header">
+      <input id="title" class="editor-input" placeholder="Title (auto from first line)">
+      <input id="tags" class="tags-input" placeholder="tags, comma">
+    </div>
+    <div class="editor-actions">
+      <button class="ed-btn" onclick="togglePin()" id="pinBtn">Pin</button>
+      <button class="ed-btn" onclick="togglePreview()" id="previewBtn">Preview</button>
+      <button class="ed-btn green-btn" onclick="sendToClipboard()">Send to Clipboard</button>
+      <button class="ed-btn danger" onclick="deleteNote()">Delete</button>
+      <button class="ed-btn" onclick="closeMobileEditor()" style="display:none" id="backBtn">&larr; Back</button>
     </div>
     <div class="editor-body">
       <textarea id="content" placeholder="Write markdown notes..."></textarea>
@@ -51,33 +352,227 @@
     </div>
   </section>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 const STORE='pof2828_notes';
 let notes=JSON.parse(localStorage.getItem(STORE)||'[]');
-let selectedId=notes[0]?.id||null; let timer;
+let selectedId=notes[0]?.id||null;
+let timer;
+
 const byId=id=>document.getElementById(id);
-function persist(){localStorage.setItem(STORE,JSON.stringify(notes));}
-function toast(m){const t=byId('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
-function createNote(){const now=new Date().toISOString();const n={id:`n_${Math.random().toString(36).slice(2,8)}`,title:'Untitled note',content:'',tags:[],pinned:false,created_at:now,updated_at:now};notes.unshift(n);selectedId=n.id;persist();renderList();loadSelected();}
-function renderList(){const q=byId('search').value.toLowerCase();const list=[...notes].sort((a,b)=>(b.pinned-a.pinned)||b.updated_at.localeCompare(a.updated_at)).filter(n=>`${n.title} ${n.content} ${(n.tags||[]).join(' ')}`.toLowerCase().includes(q));byId('list').innerHTML=list.map(n=>`<div class="card ${n.id===selectedId?'active':''}" onclick="selectNote('${n.id}')"><div>${n.pinned?'📌 ':''}${esc(n.title)}</div><div class="meta">${(n.tags||[]).join(' · ')||'no tags'} · ${new Date(n.updated_at).toLocaleString()}</div></div>`).join('');}
-function selectNote(id){selectedId=id;renderList();loadSelected();}
-function current(){return notes.find(n=>n.id===selectedId);} 
-function loadSelected(){if(!selectedId&&!notes.length)createNote();const n=current();if(!n)return;byId('title').value=n.title;byId('tags').value=(n.tags||[]).join(', ');byId('content').value=n.content;renderPreview();}
-function saveCurrent(){const n=current();if(!n)return;const content=byId('content').value;const first=content.split('\n').find(Boolean)||'Untitled note';n.title=byId('title').value.trim()||first.slice(0,80);n.content=content;n.tags=byId('tags').value.split(',').map(t=>t.trim()).filter(Boolean);n.updated_at=new Date().toISOString();persist();renderList();renderPreview();}
-function debounceSave(){clearTimeout(timer);timer=setTimeout(saveCurrent,500);}
-function togglePin(){const n=current();if(!n)return;n.pinned=!n.pinned;saveCurrent();}
-function markdown(md){return esc(md).replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');}
-function renderPreview(){byId('preview').innerHTML=markdown(byId('content').value||'');}
-function togglePreview(){byId('preview').classList.toggle('on');byId('content').classList.toggle('off');renderPreview();}
-async function sendToClipboard(){const n=current();if(!n)return;await navigator.clipboard.writeText(n.content).catch(()=>{});const clips=JSON.parse(localStorage.getItem('pof2828_clips')||'[]');clips.unshift({id:`c_${Date.now()}`,content:n.content,title:n.title,tags:['note'],created_at:new Date().toISOString()});localStorage.setItem('pof2828_clips',JSON.stringify(clips));toast('Sent to clipboard');}
-function exportJSON(){const b=new Blob([JSON.stringify(notes,null,2)],{type:'application/json'});dl(b,`pof2828_notes_${new Date().toISOString().slice(0,10)}.json`);}
-function exportMarkdown(){const n=current();if(!n)return;dl(new Blob([n.content],{type:'text/markdown'}),`${n.title.replace(/\W+/g,'_')||'note'}.md`);}
-function importJSON(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{notes=JSON.parse(await f.text());selectedId=notes[0]?.id||null;persist();renderList();loadSelected();toast('Imported');}catch{toast('Invalid JSON')}};i.click();}
-function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);toast('Exported');}
-function esc(s=''){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function persist(){ localStorage.setItem(STORE, JSON.stringify(notes)); }
+
+function toast(m){
+  const t=byId('toast');
+  t.textContent=m; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),1400);
+}
+
+function esc(s=''){
+  const d=document.createElement('div');
+  d.textContent=s; return d.innerHTML;
+}
+
+function timeAgo(iso){
+  if(!iso) return '';
+  const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<60) return 'now';
+  if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h';
+  if(s<2592000) return Math.floor(s/86400)+'d';
+  return Math.floor(s/2592000)+'mo';
+}
+
+function createNote(){
+  const now=new Date().toISOString();
+  const n={
+    id: 'n_'+Math.random().toString(36).slice(2,8),
+    title: 'Untitled note',
+    content: '',
+    tags: [],
+    pinned: false,
+    created_at: now,
+    updated_at: now
+  };
+  notes.unshift(n);
+  selectedId=n.id;
+  persist();
+  renderList();
+  loadSelected();
+}
+
+function renderList(){
+  const q=byId('search').value.toLowerCase();
+  const sorted=[...notes]
+    .sort((a,b)=>(b.pinned-a.pinned)||b.updated_at.localeCompare(a.updated_at))
+    .filter(n=>`${n.title} ${n.content} ${(n.tags||[]).join(' ')}`.toLowerCase().includes(q));
+
+  if(!sorted.length){
+    byId('list').innerHTML=`<div class="list-empty">No notes yet — click + New</div>`;
+    return;
+  }
+
+  byId('list').innerHTML=sorted.map(n=>{
+    const sel=n.id===selectedId?' selected':'';
+    const preview=(n.content||'').split('\n').find(Boolean)||'';
+    return `<div class="card${sel}" onclick="selectNote('${n.id}')">
+      <div class="card-title">${n.pinned?'&#x1F4CC; ':''}${esc(n.title)}</div>
+      <div class="card-preview">${esc(preview.substring(0,80))}</div>
+      <div class="card-bottom">
+        ${n.pinned?'<span class="pin-badge">Pinned</span>':''}
+        ${(n.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+        <span class="card-time">${timeAgo(n.updated_at)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectNote(id){
+  selectedId=id;
+  renderList();
+  loadSelected();
+  if(window.innerWidth<=720) byId('bodyWrap').classList.add('editor-open');
+}
+
+function closeMobileEditor(){ byId('bodyWrap').classList.remove('editor-open'); }
+
+function current(){ return notes.find(n=>n.id===selectedId); }
+
+function loadSelected(){
+  if(!selectedId && !notes.length) createNote();
+  const n=current();
+  if(!n) return;
+  byId('title').value=n.title;
+  byId('tags').value=(n.tags||[]).join(', ');
+  byId('content').value=n.content;
+  byId('pinBtn').textContent=n.pinned?'Unpin':'Pin';
+  renderPreview();
+}
+
+function saveCurrent(){
+  const n=current();
+  if(!n) return;
+  const content=byId('content').value;
+  const first=content.split('\n').find(Boolean)||'Untitled note';
+  n.title=byId('title').value.trim()||first.slice(0,80);
+  n.content=content;
+  n.tags=byId('tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  n.updated_at=new Date().toISOString();
+  persist();
+  renderList();
+  renderPreview();
+}
+
+function debounceSave(){ clearTimeout(timer); timer=setTimeout(saveCurrent,500); }
+
+function togglePin(){
+  const n=current();
+  if(!n) return;
+  n.pinned=!n.pinned;
+  saveCurrent();
+  byId('pinBtn').textContent=n.pinned?'Unpin':'Pin';
+  toast(n.pinned?'Pinned':'Unpinned');
+}
+
+function deleteNote(){
+  const n=current();
+  if(!n || !confirm('Delete "'+n.title+'"?')) return;
+  notes=notes.filter(x=>x.id!==n.id);
+  selectedId=notes[0]?.id||null;
+  persist();
+  renderList();
+  if(selectedId) loadSelected();
+  else {
+    byId('title').value='';
+    byId('tags').value='';
+    byId('content').value='';
+  }
+  toast('Deleted');
+}
+
+function markdown(md){
+  return esc(md)
+    .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
+function renderPreview(){ byId('preview').innerHTML=markdown(byId('content').value||''); }
+
+function togglePreview(){
+  byId('preview').classList.toggle('on');
+  byId('content').classList.toggle('off');
+  byId('previewBtn').classList.toggle('active');
+  renderPreview();
+}
+
+async function sendToClipboard(){
+  const n=current();
+  if(!n) return;
+  await navigator.clipboard.writeText(n.content).catch(()=>{});
+  const clips=JSON.parse(localStorage.getItem('pof2828_clips')||'[]');
+  clips.unshift({
+    id:'c_'+Date.now(),
+    content:n.content,
+    title:n.title,
+    tags:['note'],
+    pinned:false,
+    ts:new Date().toISOString()
+  });
+  localStorage.setItem('pof2828_clips', JSON.stringify(clips));
+  toast('Sent to clipboard');
+}
+
+function exportJSON(){
+  const b=new Blob([JSON.stringify(notes,null,2)],{type:'application/json'});
+  dl(b,`pof2828_notes_${new Date().toISOString().slice(0,10)}.json`);
+}
+
+function exportMarkdown(){
+  const n=current();
+  if(!n) return;
+  dl(new Blob([n.content],{type:'text/markdown'}),`${n.title.replace(/\W+/g,'_')||'note'}.md`);
+}
+
+function importJSON(){
+  const i=document.createElement('input');
+  i.type='file'; i.accept='.json,application/json';
+  i.onchange=async e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    try {
+      notes=JSON.parse(await f.text());
+      selectedId=notes[0]?.id||null;
+      persist(); renderList(); loadSelected(); toast('Imported');
+    } catch { toast('Invalid JSON'); }
+  };
+  i.click();
+}
+
+function dl(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name; a.click();
+  URL.revokeObjectURL(a.href); toast('Exported');
+}
+
+// ── EVENT LISTENERS ──
 ['title','tags','content'].forEach(id=>byId(id).addEventListener('input',debounceSave));
-renderList(); if(!notes.length) createNote(); else loadSelected();
+
+// Mobile back button
+if(window.innerWidth<=720) byId('backBtn').style.display='inline-block';
+
+// ── INIT ──
+renderList();
+if(!notes.length) createNote();
+else loadSelected();
 </script>
 </body>
 </html>
