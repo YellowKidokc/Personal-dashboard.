@@ -308,89 +308,40 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-const API = 'http://localhost:3456/api';
-let prompts = [];
+const STORE = 'pof2828_prompts';
+const GATEWAY = localStorage.getItem('pof2828_gateway_url') || null;
+let prompts = JSON.parse(localStorage.getItem(STORE) || '[]');
 let activeCategory = 'all';
 let searchQuery = '';
 
-// ============================================================
-// API CALLS
-// ============================================================
-async function fetchPrompts() {
-  try {
-    const res = await fetch(`${API}/prompts`);
-    if (res.ok) {
-      prompts = await res.json();
-      document.getElementById('statusDot').classList.remove('offline');
-    } else {
-      throw new Error('API error');
-    }
-  } catch (e) {
-    document.getElementById('statusDot').classList.add('offline');
-    // Fall back to localStorage
-    const cached = localStorage.getItem('prompts_cache');
-    if (cached) prompts = JSON.parse(cached);
-  }
-  // Cache locally as backup
-  localStorage.setItem('prompts_cache', JSON.stringify(prompts));
-  buildTabs();
-  render();
-}
+function persist() { localStorage.setItem(STORE, JSON.stringify(prompts)); }
+function syncStatus() { document.getElementById('statusDot').classList.toggle('offline', !GATEWAY); }
 
-async function apiSave(prompt) {
+async function syncToGateway(method, path, payload) {
+  if (!GATEWAY) return;
   try {
-    const isNew = !prompt._existing;
-    delete prompt._existing;
-    const url = isNew ? `${API}/prompts` : `${API}/prompts/${prompt.id}`;
-    const method = isNew ? 'POST' : 'PUT';
-    const res = await fetch(url, {
-      method, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(prompt),
+    await fetch(`${GATEWAY}/api/${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: payload ? JSON.stringify(payload) : undefined,
     });
-    return res.ok;
-  } catch (e) {
-    return false;
-  }
+  } catch (_) {}
 }
 
-async function apiDelete(id) {
-  try {
-    const res = await fetch(`${API}/prompts/${id}`, { method: 'DELETE' });
-    return res.ok;
-  } catch (e) {
-    return false;
-  }
-}
-
-// ============================================================
-// RENDER
-// ============================================================
 function buildTabs() {
-  const cats = ['all', ...new Set(prompts.map(p => p.category || 'General'))];
+  const cats = ['all', ...new Set(prompts.map(p => p.category || 'Custom'))];
   const container = document.getElementById('tabsContainer');
   container.innerHTML = cats.map(c =>
-    `<button class="tab${c === activeCategory ? ' active' : ''}" 
-            data-category="${c}" onclick="setCategory('${c}')">${c.toUpperCase()}</button>`
+    `<button class="tab${c === activeCategory ? ' active' : ''}" data-category="${esc(c)}" onclick="setCategory(${JSON.stringify(c)})">${esc(c.toUpperCase())}</button>`
   ).join('');
 }
 
-function setCategory(cat) {
-  activeCategory = cat;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.category === cat);
-  });
-  render();
-}
+function setCategory(cat) { activeCategory = cat; buildTabs(); render(); }
 
-function render() {
-  const list = document.getElementById('cardList');
+function filteredPrompts() {
   let filtered = prompts;
-
   if (activeCategory !== 'all') {
-    filtered = filtered.filter(p => (p.category || 'General').toLowerCase() === activeCategory.toLowerCase());
+    filtered = filtered.filter(p => (p.category || 'Custom').toLowerCase() === activeCategory.toLowerCase());
   }
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -400,13 +351,14 @@ function render() {
       (p.tags || []).some(t => t.toLowerCase().includes(q))
     );
   }
+  return filtered;
+}
 
+function render() {
+  const list = document.getElementById('cardList');
+  const filtered = filteredPrompts();
   if (filtered.length === 0) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="icon">📋</div>
-        <p>${searchQuery ? 'No prompts match your search' : 'No prompts yet — click + NEW to create one'}</p>
-      </div>`;
+    list.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${searchQuery ? 'No prompts match your search' : 'No prompts yet — click + NEW to create one'}</p></div>`;
     return;
   }
 
@@ -419,65 +371,35 @@ function render() {
         ${p.hotkey ? `<span class="hotkey-badge">${esc(formatHotkey(p.hotkey))}</span>` : ''}
       </div>
       <div class="card-actions">
-        <button class="action-btn copy" onclick="event.stopPropagation();copyPrompt('${p.id}')">
-          <span class="icon">📋</span> COPY
-        </button>
-        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${p.id}')">
-          <span class="icon">✏️</span> EDIT
-        </button>
-        <button class="action-btn share" onclick="event.stopPropagation();sharePrompt('${p.id}')">
-          <span class="icon">🔗</span>
-        </button>
-        <button class="action-btn delete" onclick="event.stopPropagation();deletePrompt('${p.id}')">
-          <span class="icon">🗑️</span>
-        </button>
+        <button class="action-btn copy" onclick="event.stopPropagation();copyPrompt('${p.id}')"><span class="icon">📋</span> COPY</button>
+        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${p.id}')"><span class="icon">✏️</span> EDIT</button>
+        <button class="action-btn share" onclick="event.stopPropagation();sharePrompt('${p.id}')"><span class="icon">🔗</span></button>
+        <button class="action-btn delete" onclick="event.stopPropagation();deletePrompt('${p.id}')"><span class="icon">🗑️</span></button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ============================================================
-// ACTIONS
-// ============================================================
 async function copyPrompt(id) {
-  const p = prompts.find(x => x.id === id);
-  if (!p) return;
-  try {
-    await navigator.clipboard.writeText(p.content);
-    showToast('COPIED TO CLIPBOARD');
-  } catch (e) {
-    // Fallback
-    const ta = document.createElement('textarea');
-    ta.value = p.content;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('COPIED');
-  }
-}
-
-async function deletePrompt(id) {
-  const p = prompts.find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`Delete "${p.name}"?`)) return;
-  const ok = await apiDelete(id);
-  if (ok) {
-    prompts = prompts.filter(x => x.id !== id);
-    localStorage.setItem('prompts_cache', JSON.stringify(prompts));
-    render();
-    showToast('DELETED');
-  } else {
-    showToast('DELETE FAILED');
-  }
+  const p = prompts.find(x => x.id === id); if (!p) return;
+  await navigator.clipboard.writeText(p.content).catch(() => {});
+  showToast('COPIED TO CLIPBOARD');
 }
 
 function sharePrompt(id) {
-  const p = prompts.find(x => x.id === id);
-  if (!p) return;
-  const shareData = JSON.stringify(p, null, 2);
-  navigator.clipboard.writeText(shareData);
+  const p = prompts.find(x => x.id === id); if (!p) return;
+  navigator.clipboard.writeText(JSON.stringify(p, null, 2)).catch(() => {});
   showToast('JSON COPIED');
+}
+
+async function deletePrompt(id) {
+  const p = prompts.find(x => x.id === id); if (!p) return;
+  if (!confirm(`Delete "${p.name}"?`)) return;
+  prompts = prompts.filter(x => x.id !== id);
+  persist();
+  syncToGateway('DELETE', `prompts/${id}`);
+  buildTabs();
+  render();
+  showToast('DELETED');
 }
 
 function openCreateModal() {
@@ -492,8 +414,7 @@ function openCreateModal() {
 }
 
 function openEditModal(id) {
-  const p = prompts.find(x => x.id === id);
-  if (!p) return;
+  const p = prompts.find(x => x.id === id); if (!p) return;
   document.getElementById('modalTitle').textContent = 'Edit Prompt';
   document.getElementById('editId').value = p.id;
   document.getElementById('fieldName').value = p.name;
@@ -504,116 +425,65 @@ function openEditModal(id) {
   document.getElementById('modalOverlay').classList.add('open');
 }
 
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
 
-async function savePrompt() {
+function savePrompt() {
   const editId = document.getElementById('editId').value;
   const data = {
+    id: editId || `p_${Math.random().toString(36).slice(2,8)}`,
     name: document.getElementById('fieldName').value.trim(),
-    category: document.getElementById('fieldCategory').value.trim() || 'General',
-    content: document.getElementById('fieldContent').value,
+    category: document.getElementById('fieldCategory').value.trim() || 'Custom',
+    content: document.getElementById('fieldContent').value.trim(),
     hotkey: document.getElementById('fieldHotkey').value.trim() || null,
     tags: document.getElementById('fieldTags').value.split(',').map(t => t.trim()).filter(Boolean),
+    created_at: new Date().toISOString(),
   };
-
-  if (!data.name || !data.content) {
-    showToast('NAME AND CONTENT REQUIRED');
-    return;
-  }
+  if (!data.name || !data.content) return showToast('NAME AND CONTENT REQUIRED');
 
   if (editId) {
-    data.id = editId;
-    data._existing = true;
+    const idx = prompts.findIndex(p => p.id === editId);
+    if (idx >= 0) prompts[idx] = { ...prompts[idx], ...data };
+    syncToGateway('PUT', `prompts/${editId}`, data);
+  } else {
+    prompts.unshift(data);
+    syncToGateway('POST', 'prompts', data);
   }
 
-  const ok = await apiSave(data);
-  if (ok) {
-    closeModal();
-    await fetchPrompts();
-    showToast(editId ? 'UPDATED' : 'CREATED');
-  } else {
-    showToast('SAVE FAILED — SERVER OFFLINE?');
-    // Save locally anyway
-    if (editId) {
-      const idx = prompts.findIndex(p => p.id === editId);
-      if (idx >= 0) Object.assign(prompts[idx], data);
-    } else {
-      data.id = 'p' + Math.random().toString(36).substr(2, 8);
-      data.created_at = new Date().toISOString();
-      prompts.push(data);
-    }
-    localStorage.setItem('prompts_cache', JSON.stringify(prompts));
-    closeModal();
-    buildTabs();
-    render();
-    showToast('SAVED LOCALLY (OFFLINE)');
-  }
+  persist(); closeModal(); buildTabs(); render(); showToast(editId ? 'UPDATED' : 'CREATED');
 }
 
 function exportJSON() {
   const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `prompts_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('EXPORTED');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `pof2828_prompts_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(a.href); showToast('EXPORTED');
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-function esc(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+function importJSON() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json';
+  input.onchange = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    try {
+      const next = JSON.parse(await f.text());
+      prompts = Array.isArray(next) ? next : [];
+      persist(); buildTabs(); render(); showToast('IMPORTED');
+    } catch { showToast('INVALID JSON'); }
+  };
+  input.click();
 }
 
-function formatHotkey(hk) {
-  if (!hk) return '';
-  return hk.replace(/\^/g, 'Ctrl+').replace(/\+/g, '+').replace(/!/g, 'Alt+')
-            .replace(/\#/g, 'Win+').replace(/\+\+/g, '+');
-}
+function esc(s='') { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function formatHotkey(hk='') { return hk.replace(/\^/g,'Ctrl+').replace(/!/g,'Alt+').replace(/#/g,'Win+'); }
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1800);
-}
-
-// ============================================================
-// KEYBOARD
-// ============================================================
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (document.getElementById('modalOverlay').classList.contains('open')) {
-      closeModal();
-    }
-  }
-  // Ctrl+N = new prompt
-  if (e.ctrlKey && e.key === 'n') {
-    e.preventDefault();
-    openCreateModal();
-  }
+  if (e.key === 'Escape' && document.getElementById('modalOverlay').classList.contains('open')) closeModal();
+  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); openCreateModal(); }
 });
+document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value; render(); });
 
-// Search
-document.getElementById('searchInput').addEventListener('input', e => {
-  searchQuery = e.target.value;
-  render();
-});
-
-// ============================================================
-// INIT
-// ============================================================
-fetchPrompts();
-// Poll for changes every 5s (in case AHK or another client modifies data)
-setInterval(fetchPrompts, 5000);
+document.querySelector('.header-actions').insertAdjacentHTML('beforeend','<button class="hdr-btn" onclick="importJSON()">IMPORT</button>');
+syncStatus(); buildTabs(); render();
 </script>
 </body>
 </html>
