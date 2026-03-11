@@ -210,6 +210,8 @@
     <input type="text" id="fieldCategory" placeholder="e.g. Theophysics, Infrastructure">
     <label>Tags (comma separated)</label>
     <input type="text" id="fieldTags" placeholder="e.g. dashboard, api">
+    <label>Notes</label>
+    <input type="text" id="fieldNotes" placeholder="Optional annotation">
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeModal()">CANCEL</button>
       <button class="modal-btn save" onclick="saveBookmark()">SAVE</button>
@@ -220,174 +222,70 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'http://localhost:3456/api';
-let bookmarks = [];
+const STORE = 'pof2828_bookmarks';
+const GATEWAY = localStorage.getItem('pof2828_gateway_url') || null;
+const CATEGORY_COLORS = {
+  Theophysics: '#F2C94C', Infrastructure: '#4F8EF7', Research: '#4ECB71',
+  Consciousness: '#9B7FE8', Physics: '#06b6d4', General: '#8A8F9E'
+};
+let bookmarks = JSON.parse(localStorage.getItem(STORE) || '[]');
 let activeCategory = 'all';
 let searchQuery = '';
 
-async function fetchBookmarks() {
-  try {
-    const res = await fetch(`${API}/bookmarks`);
-    if (res.ok) {
-      bookmarks = await res.json();
-      document.getElementById('statusDot').classList.remove('offline');
-    } else throw new Error();
-  } catch (e) {
-    document.getElementById('statusDot').classList.add('offline');
-    const cached = localStorage.getItem('bookmarks_cache');
-    if (cached) bookmarks = JSON.parse(cached);
-  }
-  localStorage.setItem('bookmarks_cache', JSON.stringify(bookmarks));
-  buildTabs();
-  render();
-}
+function persist(){ localStorage.setItem(STORE, JSON.stringify(bookmarks)); }
+function syncStatus(){ document.getElementById('statusDot').classList.toggle('offline', !GATEWAY); }
+async function syncToGateway(method,path,payload){ if(!GATEWAY) return; try{ await fetch(`${GATEWAY}/api/${path}`,{method,headers:{'Content-Type':'application/json'},body:payload?JSON.stringify(payload):undefined}); }catch(_){} }
 
-async function apiSave(bm) {
-  try {
-    const isNew = !bm._existing;
-    delete bm._existing;
-    const url = isNew ? `${API}/bookmarks` : `${API}/bookmarks/${bm.id}`;
-    const method = isNew ? 'POST' : 'PUT';
-    const res = await fetch(url, {
-      method, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bm),
-    });
-    return res.ok;
-  } catch (e) { return false; }
+function categories(){ return ['all', ...new Set(bookmarks.map(b => b.category || 'General'))]; }
+function buildTabs(){
+  const c = document.getElementById('tabsContainer');
+  c.innerHTML = categories().map(cat=>`<button class="tab${cat===activeCategory?' active':''}" data-category="${esc(cat)}" onclick="setCategory(${JSON.stringify(cat)})">${esc(cat.toUpperCase())}</button>`).join('');
 }
+function setCategory(cat){ activeCategory=cat; buildTabs(); render(); }
 
-async function apiDelete(id) {
-  try { return (await fetch(`${API}/bookmarks/${id}`, { method: 'DELETE' })).ok; }
-  catch (e) { return false; }
-}
-
-const catColors = {
-  'theophysics': '#f59e0b', 'infrastructure': '#3b82f6', 'research': '#10b981',
-  'consciousness': '#8b5cf6', 'physics': '#06b6d4', 'general': '#6b7280',
-};
-function getCatColor(cat) {
-  return catColors[(cat||'').toLowerCase()] || '#4a6fa5';
-}
-
-function buildTabs() {
-  const cats = ['all', ...new Set(bookmarks.map(b => b.category || 'General'))];
-  document.getElementById('tabsContainer').innerHTML = cats.map(c =>
-    `<button class="tab${c===activeCategory?' active':''}" data-category="${c}" 
-            onclick="setCategory('${c}')">${c.toUpperCase()}</button>`
-  ).join('');
-}
-
-function setCategory(cat) {
-  activeCategory = cat;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.category === cat));
-  render();
-}
-
-function render() {
+function render(){
   const list = document.getElementById('cardList');
   let filtered = bookmarks;
-  if (activeCategory !== 'all')
-    filtered = filtered.filter(b => (b.category||'General').toLowerCase() === activeCategory.toLowerCase());
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    filtered = filtered.filter(b => b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q));
-  }
-
-  if (!filtered.length) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:#666680;font-size:12px">No bookmarks found</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(b => `
-    <div class="card" style="border-left-color:${getCatColor(b.category)}">
+  if(activeCategory!=='all'){ filtered = filtered.filter(b=>(b.category||'General').toLowerCase()===activeCategory.toLowerCase()); }
+  if(searchQuery){ const q=searchQuery.toLowerCase(); filtered=filtered.filter(b=>[b.title,b.url,b.notes||'',(b.tags||[]).join(' ')].join(' ').toLowerCase().includes(q)); }
+  if(!filtered.length){ list.innerHTML='<div class="empty-state"><div class="icon">🔗</div><p>No bookmarks found.</p></div>'; return; }
+  list.innerHTML = filtered.map(b=>{
+    const color = CATEGORY_COLORS[b.category] || CATEGORY_COLORS.General;
+    return `<div class="card" style="border-left-color:${color}" data-id="${b.id}">
       <div class="card-title">${esc(b.title)}</div>
       <div class="card-url">${esc(b.url)}</div>
-      <div class="card-tags">
-        ${(b.tags||[]).map(t => `<span class="tag-pill">${esc(t)}</span>`).join('')}
-      </div>
+      <div class="card-preview" style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">${esc((b.notes||'').slice(0,120))}</div>
+      <div class="card-tags">${(b.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}</div>
       <div class="card-actions">
-        <button class="action-btn open" onclick="event.stopPropagation();window.open('${esc(b.url)}','_blank')">
-          <span class="icon">🔗</span> OPEN
-        </button>
-        <button class="action-btn copy" onclick="event.stopPropagation();copyUrl('${esc(b.url)}')">
-          <span class="icon">📋</span> COPY
-        </button>
-        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${b.id}')">
-          <span class="icon">✏️</span>
-        </button>
-        <button class="action-btn delete" onclick="event.stopPropagation();deleteBookmark('${b.id}')">
-          <span class="icon">🗑️</span>
-        </button>
+        <button class="action-btn open" onclick="event.stopPropagation();window.open('${b.url}','_blank')"><span class="icon">↗</span> OPEN</button>
+        <button class="action-btn copy" onclick="event.stopPropagation();copyUrl('${b.id}')"><span class="icon">📋</span></button>
+        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${b.id}')"><span class="icon">✏️</span></button>
+        <button class="action-btn delete" onclick="event.stopPropagation();deleteBookmark('${b.id}')"><span class="icon">🗑️</span></button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
-async function copyUrl(url) {
-  await navigator.clipboard.writeText(url);
-  showToast('URL COPIED');
+async function copyUrl(id){ const b=bookmarks.find(x=>x.id===id); if(!b)return; await navigator.clipboard.writeText(b.url).catch(()=>{}); showToast('URL COPIED'); }
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+function openCreateModal(){ document.getElementById('modalTitle').textContent='New Bookmark'; ['editId','fieldTitle','fieldUrl','fieldCategory','fieldTags'].forEach(id=>document.getElementById(id).value=''); document.getElementById('fieldNotes').value=''; document.getElementById('modalOverlay').classList.add('open'); }
+function openEditModal(id){ const b=bookmarks.find(x=>x.id===id); if(!b)return; document.getElementById('modalTitle').textContent='Edit Bookmark'; document.getElementById('editId').value=b.id; document.getElementById('fieldTitle').value=b.title; document.getElementById('fieldUrl').value=b.url; document.getElementById('fieldCategory').value=b.category||'General'; document.getElementById('fieldTags').value=(b.tags||[]).join(', '); document.getElementById('fieldNotes').value=b.notes||''; document.getElementById('modalOverlay').classList.add('open'); }
+function saveBookmark(){
+  const editId=document.getElementById('editId').value;
+  const data={ id: editId||`b_${Math.random().toString(36).slice(2,8)}`, title:document.getElementById('fieldTitle').value.trim(), url:document.getElementById('fieldUrl').value.trim(), category:document.getElementById('fieldCategory').value.trim()||'General', tags:document.getElementById('fieldTags').value.split(',').map(t=>t.trim()).filter(Boolean), notes:document.getElementById('fieldNotes').value.trim(), created_at:new Date().toISOString() };
+  if(!data.title||!data.url) return showToast('TITLE AND URL REQUIRED');
+  if(editId){ const idx=bookmarks.findIndex(x=>x.id===editId); if(idx>=0) bookmarks[idx]={...bookmarks[idx],...data}; syncToGateway('PUT',`bookmarks/${editId}`,data);} else { bookmarks.unshift(data); syncToGateway('POST','bookmarks',data);}
+  persist(); closeModal(); buildTabs(); render(); showToast(editId?'UPDATED':'CREATED');
 }
+function deleteBookmark(id){ const b=bookmarks.find(x=>x.id===id); if(!b||!confirm(`Delete "${b.title}"?`)) return; bookmarks=bookmarks.filter(x=>x.id!==id); persist(); syncToGateway('DELETE',`bookmarks/${id}`); buildTabs(); render(); showToast('DELETED'); }
+function exportJSON(){ const blob=new Blob([JSON.stringify(bookmarks,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`pof2828_bookmarks_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(a.href); showToast('EXPORTED'); }
+function importJSON(){ const input=document.createElement('input'); input.type='file'; input.accept='.json,application/json'; input.onchange=async(e)=>{ const f=e.target.files?.[0]; if(!f)return; try{ const next=JSON.parse(await f.text()); bookmarks=Array.isArray(next)?next:[]; persist(); buildTabs(); render(); showToast('IMPORTED'); }catch{ showToast('INVALID JSON'); } }; input.click(); }
+function esc(s=''){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
-async function deleteBookmark(id) {
-  if (!confirm('Delete this bookmark?')) return;
-  if (await apiDelete(id)) {
-    bookmarks = bookmarks.filter(b => b.id !== id);
-    localStorage.setItem('bookmarks_cache', JSON.stringify(bookmarks));
-    render();
-    showToast('DELETED');
-  }
-}
-
-function openCreateModal() {
-  document.getElementById('modalTitle').textContent = 'New Bookmark';
-  document.getElementById('editId').value = '';
-  document.getElementById('fieldTitle').value = '';
-  document.getElementById('fieldUrl').value = '';
-  document.getElementById('fieldCategory').value = '';
-  document.getElementById('fieldTags').value = '';
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function openEditModal(id) {
-  const b = bookmarks.find(x => x.id === id);
-  if (!b) return;
-  document.getElementById('modalTitle').textContent = 'Edit Bookmark';
-  document.getElementById('editId').value = b.id;
-  document.getElementById('fieldTitle').value = b.title;
-  document.getElementById('fieldUrl').value = b.url;
-  document.getElementById('fieldCategory').value = b.category || '';
-  document.getElementById('fieldTags').value = (b.tags||[]).join(', ');
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-
-async function saveBookmark() {
-  const editId = document.getElementById('editId').value;
-  const data = {
-    title: document.getElementById('fieldTitle').value.trim(),
-    url: document.getElementById('fieldUrl').value.trim(),
-    category: document.getElementById('fieldCategory').value.trim() || 'General',
-    tags: document.getElementById('fieldTags').value.split(',').map(t=>t.trim()).filter(Boolean),
-  };
-  if (!data.title || !data.url) { showToast('TITLE AND URL REQUIRED'); return; }
-  if (editId) { data.id = editId; data._existing = true; }
-  if (await apiSave(data)) {
-    closeModal(); await fetchBookmarks(); showToast(editId ? 'UPDATED' : 'CREATED');
-  } else { showToast('SAVE FAILED'); }
-}
-
-function esc(s) { if(!s)return''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-function showToast(msg) {
-  const t=document.getElementById('toast'); t.textContent=msg;
-  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800);
-}
-
-document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value; render(); });
-document.addEventListener('keydown', e => { if(e.key==='Escape')closeModal(); });
-
-fetchBookmarks();
-setInterval(fetchBookmarks, 5000);
+document.getElementById('searchInput').addEventListener('input',e=>{ searchQuery=e.target.value; render(); });
+document.querySelector('.header-top > div:last-child').insertAdjacentHTML('beforeend','<button class="hdr-btn" onclick="exportJSON()">EXPORT</button><button class="hdr-btn" onclick="importJSON()">IMPORT</button>');
+syncStatus(); buildTabs(); render();
 </script>
 </body>
 </html>
