@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>POF 2828 — Prompt Picker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121c;
+    --surface2: #1a1a25;
+    --border: #1e1e2e;
+    --border-hover: #2a2a3e;
+    --text: #c8ccd4;
+    --text-dim: #666680;
+    --text-bright: #e8ecf4;
+    --accent: #4a6fa5;
+    --gold: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --blue: #3b82f6;
+    --toast-bg: #f59e0b;
+    --toast-text: #000;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+
+  body {
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ============ HEADER ============ */
+  .header {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: #0d0d14;
+    flex-shrink: 0;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand-tag {
+    font-size: 10px; letter-spacing: 3px; color: var(--gold); font-weight: 700;
+  }
+  .brand-sep { font-size: 11px; color: #2a2a3a; }
+  .brand-sub { font-size: 10px; letter-spacing: 2px; color: #444; }
+
+  .header-actions {
+    display: flex; gap: 6px;
+  }
+  .hdr-btn {
+    background: transparent; border: 1px solid #2a2a3a; color: #555;
+    padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: inherit;
+    cursor: pointer; letter-spacing: 1px; transition: all 0.12s ease;
+  }
+  .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hdr-btn.active { background: rgba(16,185,129,0.12); border-color: var(--green); color: var(--green); }
+
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    background: var(--green); margin-right: 4px;
+    box-shadow: 0 0 6px var(--green);
+  }
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* ============ SEARCH ============ */
+  .search-wrap { position: relative; }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: #3a3a4a; pointer-events: none; font-size: 14px;
+  }
+  .search-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 9px 12px 9px 32px; color: var(--text);
+    font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: #333; }
+
+  /* ============ TABS ============ */
+  .tabs {
+    display: flex; gap: 2px; padding: 8px 16px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 6px 14px 8px; font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-dim); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.12s; white-space: nowrap;
+    font-family: inherit; background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ============ CARD LIST ============ */
+  .card-list {
+    flex: 1; overflow-y: auto; padding: 12px 16px; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px 14px; cursor: pointer;
+    transition: all 0.08s ease; position: relative;
+  }
+  .card:hover { background: #14141e; border-color: var(--border-hover); }
+  .card:active { transform: scale(0.99); }
+  .card.selected { border-color: var(--accent); background: #14142a; }
+
+  .card-title {
+    font-size: 13px; font-weight: 700; color: var(--text-bright);
+    margin-bottom: 4px; line-height: 1.3;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-preview {
+    font-size: 11px; color: var(--text-dim); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+    overflow: hidden; margin-bottom: 8px;
+  }
+  .card-tags {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .tag-pill {
+    font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px; background: #15151f;
+    color: var(--text-dim); border: 1px solid #1e1e2e;
+  }
+  .hotkey-badge {
+    font-size: 8px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px;
+    background: rgba(245,158,11,0.12); color: var(--gold);
+    border: 1px solid rgba(245,158,11,0.3); font-weight: 600;
+  }
+
+  /* ============ ACTION BUTTONS (BIG for thumbs) ============ */
+  .card-actions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .action-btn {
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    min-width: 52px; min-height: 44px; padding: 8px 14px;
+    border-radius: 5px; border: 1px solid #2a2a3a; background: transparent;
+    color: var(--text-dim); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; font-family: inherit; cursor: pointer;
+    transition: all 0.1s ease; font-weight: 500;
+  }
+  .action-btn:active { transform: scale(0.95); }
+  .action-btn.copy {
+    border-color: rgba(16,185,129,0.4); color: var(--green); flex: 1;
+  }
+  .action-btn.copy:hover { background: rgba(16,185,129,0.12); }
+  .action-btn.edit { border-color: rgba(59,130,246,0.4); color: var(--blue); }
+  .action-btn.edit:hover { background: rgba(59,130,246,0.12); }
+  .action-btn.share { border-color: rgba(139,92,246,0.4); color: var(--purple); }
+  .action-btn.share:hover { background: rgba(139,92,246,0.12); }
+  .action-btn.delete { border-color: rgba(239,68,68,0.3); color: #884444; }
+  .action-btn.delete:hover { background: rgba(239,68,68,0.08); color: var(--red); }
+  .action-btn .icon { font-size: 16px; }
+
+  /* ============ MODAL (Create/Edit) ============ */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; width: 100%; max-width: 520px;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 {
+    font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 16px; font-weight: 600;
+  }
+  .modal label {
+    display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 4px; margin-top: 12px;
+  }
+  .modal input, .modal textarea, .modal select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 10px 12px; color: var(--text);
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .modal textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+  .modal-actions {
+    display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;
+  }
+  .modal-btn {
+    padding: 10px 24px; border-radius: 5px; font-size: 11px; font-family: inherit;
+    letter-spacing: 1px; cursor: pointer; font-weight: 600; min-height: 44px;
+    border: 1px solid var(--border);
+  }
+  .modal-btn.save { background: var(--green); color: #000; border-color: var(--green); }
+  .modal-btn.cancel { background: transparent; color: var(--text-dim); }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--toast-bg); color: var(--toast-text); padding: 8px 20px;
+    border-radius: 5px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    font-weight: 700; font-family: inherit; z-index: 200;
+    transition: transform 0.2s ease; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ============ EMPTY STATE ============ */
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: var(--text-dim);
+  }
+  .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
+  .empty-state p { font-size: 12px; letter-spacing: 1px; }
+
+  /* ============ MOBILE ============ */
+  @media (max-width: 480px) {
+    .card-actions { gap: 4px; }
+    .action-btn { min-height: 48px; font-size: 11px; padding: 10px 12px; }
+    .action-btn.copy { flex: 2; }
+    .card { padding: 14px 12px; }
+    .card-title { font-size: 14px; }
+    .card-preview { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="brand">
+      <span class="brand-tag">POF 2828</span>
+      <span class="brand-sep">|</span>
+      <span class="brand-sub">PROMPT PICKER</span>
+    </div>
+    <div class="header-actions">
+      <span class="status-dot" id="statusDot"></span>
+      <button class="hdr-btn" onclick="openCreateModal()">+ NEW</button>
+      <button class="hdr-btn" onclick="exportJSON()">EXPORT</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" class="search-input" id="searchInput"
+           placeholder="Search prompts..." autocomplete="off">
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabsContainer">
+  <button class="tab active" data-category="all">ALL</button>
+</div>
+
+<!-- CARD LIST -->
+<div class="card-list" id="cardList"></div>
+
+<!-- CREATE/EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">New Prompt</h2>
+    <input type="hidden" id="editId">
+
+    <label>Name</label>
+    <input type="text" id="fieldName" placeholder="e.g. Steelman Objection">
+
+    <label>Category</label>
+    <input type="text" id="fieldCategory" placeholder="e.g. Framework, Research, General">
+
+    <label>Content</label>
+    <textarea id="fieldContent" placeholder="The prompt content..."></textarea>
+
+    <label>Hotkey (AHK format, e.g. ^+1 = Ctrl+Shift+1)</label>
+    <input type="text" id="fieldHotkey" placeholder="Leave blank for no hotkey">
+
+    <label>Tags (comma separated)</label>
+    <input type="text" id="fieldTags" placeholder="e.g. framework, research, east">
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">CANCEL</button>
+      <button class="modal-btn save" onclick="savePrompt()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API = 'http://localhost:3456/api';
+let prompts = [];
+let activeCategory = 'all';
+let searchQuery = '';
+
+// ============================================================
+// API CALLS
+// ============================================================
+async function fetchPrompts() {
+  try {
+    const res = await fetch(`${API}/prompts`);
+    if (res.ok) {
+      prompts = await res.json();
+      document.getElementById('statusDot').classList.remove('offline');
+    } else {
+      throw new Error('API error');
+    }
+  } catch (e) {
+    document.getElementById('statusDot').classList.add('offline');
+    // Fall back to localStorage
+    const cached = localStorage.getItem('prompts_cache');
+    if (cached) prompts = JSON.parse(cached);
+  }
+  // Cache locally as backup
+  localStorage.setItem('prompts_cache', JSON.stringify(prompts));
+  buildTabs();
+  render();
+}
+
+async function apiSave(prompt) {
+  try {
+    const isNew = !prompt._existing;
+    delete prompt._existing;
+    const url = isNew ? `${API}/prompts` : `${API}/prompts/${prompt.id}`;
+    const method = isNew ? 'POST' : 'PUT';
+    const res = await fetch(url, {
+      method, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(prompt),
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function apiDelete(id) {
+  try {
+    const res = await fetch(`${API}/prompts/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function buildTabs() {
+  const cats = ['all', ...new Set(prompts.map(p => p.category || 'General'))];
+  const container = document.getElementById('tabsContainer');
+  container.innerHTML = cats.map(c =>
+    `<button class="tab${c === activeCategory ? ' active' : ''}" 
+            data-category="${c}" onclick="setCategory('${c}')">${c.toUpperCase()}</button>`
+  ).join('');
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.category === cat);
+  });
+  render();
+}
+
+function render() {
+  const list = document.getElementById('cardList');
+  let filtered = prompts;
+
+  if (activeCategory !== 'all') {
+    filtered = filtered.filter(p => (p.category || 'General').toLowerCase() === activeCategory.toLowerCase());
+  }
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.content.toLowerCase().includes(q) ||
+      (p.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>${searchQuery ? 'No prompts match your search' : 'No prompts yet — click + NEW to create one'}</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => `
+    <div class="card" data-id="${p.id}">
+      <div class="card-title">${esc(p.name)}</div>
+      <div class="card-preview">${esc(p.content)}</div>
+      <div class="card-tags">
+        ${(p.tags || []).map(t => `<span class="tag-pill">${esc(t)}</span>`).join('')}
+        ${p.hotkey ? `<span class="hotkey-badge">${esc(formatHotkey(p.hotkey))}</span>` : ''}
+      </div>
+      <div class="card-actions">
+        <button class="action-btn copy" onclick="event.stopPropagation();copyPrompt('${p.id}')">
+          <span class="icon">📋</span> COPY
+        </button>
+        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${p.id}')">
+          <span class="icon">✏️</span> EDIT
+        </button>
+        <button class="action-btn share" onclick="event.stopPropagation();sharePrompt('${p.id}')">
+          <span class="icon">🔗</span>
+        </button>
+        <button class="action-btn delete" onclick="event.stopPropagation();deletePrompt('${p.id}')">
+          <span class="icon">🗑️</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+async function copyPrompt(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  try {
+    await navigator.clipboard.writeText(p.content);
+    showToast('COPIED TO CLIPBOARD');
+  } catch (e) {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = p.content;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('COPIED');
+  }
+}
+
+async function deletePrompt(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Delete "${p.name}"?`)) return;
+  const ok = await apiDelete(id);
+  if (ok) {
+    prompts = prompts.filter(x => x.id !== id);
+    localStorage.setItem('prompts_cache', JSON.stringify(prompts));
+    render();
+    showToast('DELETED');
+  } else {
+    showToast('DELETE FAILED');
+  }
+}
+
+function sharePrompt(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  const shareData = JSON.stringify(p, null, 2);
+  navigator.clipboard.writeText(shareData);
+  showToast('JSON COPIED');
+}
+
+function openCreateModal() {
+  document.getElementById('modalTitle').textContent = 'New Prompt';
+  document.getElementById('editId').value = '';
+  document.getElementById('fieldName').value = '';
+  document.getElementById('fieldCategory').value = '';
+  document.getElementById('fieldContent').value = '';
+  document.getElementById('fieldHotkey').value = '';
+  document.getElementById('fieldTags').value = '';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modalTitle').textContent = 'Edit Prompt';
+  document.getElementById('editId').value = p.id;
+  document.getElementById('fieldName').value = p.name;
+  document.getElementById('fieldCategory').value = p.category || '';
+  document.getElementById('fieldContent').value = p.content;
+  document.getElementById('fieldHotkey').value = p.hotkey || '';
+  document.getElementById('fieldTags').value = (p.tags || []).join(', ');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+async function savePrompt() {
+  const editId = document.getElementById('editId').value;
+  const data = {
+    name: document.getElementById('fieldName').value.trim(),
+    category: document.getElementById('fieldCategory').value.trim() || 'General',
+    content: document.getElementById('fieldContent').value,
+    hotkey: document.getElementById('fieldHotkey').value.trim() || null,
+    tags: document.getElementById('fieldTags').value.split(',').map(t => t.trim()).filter(Boolean),
+  };
+
+  if (!data.name || !data.content) {
+    showToast('NAME AND CONTENT REQUIRED');
+    return;
+  }
+
+  if (editId) {
+    data.id = editId;
+    data._existing = true;
+  }
+
+  const ok = await apiSave(data);
+  if (ok) {
+    closeModal();
+    await fetchPrompts();
+    showToast(editId ? 'UPDATED' : 'CREATED');
+  } else {
+    showToast('SAVE FAILED — SERVER OFFLINE?');
+    // Save locally anyway
+    if (editId) {
+      const idx = prompts.findIndex(p => p.id === editId);
+      if (idx >= 0) Object.assign(prompts[idx], data);
+    } else {
+      data.id = 'p' + Math.random().toString(36).substr(2, 8);
+      data.created_at = new Date().toISOString();
+      prompts.push(data);
+    }
+    localStorage.setItem('prompts_cache', JSON.stringify(prompts));
+    closeModal();
+    buildTabs();
+    render();
+    showToast('SAVED LOCALLY (OFFLINE)');
+  }
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `prompts_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('EXPORTED');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function formatHotkey(hk) {
+  if (!hk) return '';
+  return hk.replace(/\^/g, 'Ctrl+').replace(/\+/g, '+').replace(/!/g, 'Alt+')
+            .replace(/\#/g, 'Win+').replace(/\+\+/g, '+');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('modalOverlay').classList.contains('open')) {
+      closeModal();
+    }
+  }
+  // Ctrl+N = new prompt
+  if (e.ctrlKey && e.key === 'n') {
+    e.preventDefault();
+    openCreateModal();
+  }
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+fetchPrompts();
+// Poll for changes every 5s (in case AHK or another client modifies data)
+setInterval(fetchPrompts, 5000);
+</script>
+</body>
+</html>
