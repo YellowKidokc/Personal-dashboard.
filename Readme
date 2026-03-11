@@ -1,0 +1,535 @@
+# THEOPHYSICS HUB — DEPLOYMENT GUIDE
+## POF 2828 · Unified System Architecture
+### Version 1.0 · March 10, 2026
+
+---
+
+## WHAT THIS DOCUMENT IS
+
+This is the complete build specification for the Theophysics Hub — a unified system that starts as standalone HTML tools on a Windows desktop and scales into a full Cloudflare-hosted PWA with AI agents that learn, organize, and build on David's research.
+
+Any AI reading this document should be able to execute every phase without additional context.
+
+---
+
+## SYSTEM OVERVIEW
+
+The Theophysics Hub is a three-phase deployment:
+
+**Phase 1 — Local Tools (Sealed HTML):** Three standalone HTML files that run from Windows Startup with zero dependencies. localStorage only. No server, no build step, no framework.
+
+**Phase 2 — Local Hub + Notes:** A launcher page that unifies all tools into a tabbed dashboard with a built-in notes/scratch system. Still pure HTML. Still runs from a local folder.
+
+**Phase 3 — Cloudflare PWA + AI:** Deploy to Cloudflare Pages. Add manifest.json and service worker. Connect to existing Cloudflare Workers via a gateway. AI agents on Cloudflare get access to R2 buckets, D1 databases, and all user data. The system becomes self-improving.
+
+---
+
+## PHASE 1: SEALED HTML TOOLS
+
+### Design Principles
+- Single HTML file per tool. No external dependencies except Google Fonts.
+- localStorage is the ONLY data store.
+- Export/Import via JSON for backup and portability.
+- Every tool must work by double-clicking the HTML file. No server.
+- All tools share the same brand system (see Brand Spec below).
+- Each tool has a dual-mode API layer: a single variable (`GATEWAY_URL`) that, when set, enables Cloudflare sync on top of localStorage. Default is `null` (offline only).
+
+### Tool 1: Clipboard Manager (COMPLETE)
+- **File:** `clipboard.html`
+- **Location:** `C:\Users\lowes\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\`
+- **Features:**
+  - Two-pane layout: card list (left) + detail view (right)
+  - 20 hotkey slots: Ctrl+Shift+1-9 (slots 1-9), Ctrl+Shift+0 (slot 10), Ctrl+Shift+F1-F10 (slots 11-20)
+  - Ctrl+Shift+V: instant capture from system clipboard
+  - Ctrl+Shift+N: new clip
+  - Arrow keys + Enter: navigate and copy
+  - Pin, tag, search, filter (All / Pinned / Tagged / Hotkeyed)
+  - Export/Import JSON
+  - localStorage key: `pof2828_clips`
+
+### Tool 2: Prompt Picker (TO BUILD)
+- **File:** `prompt_picker.html`
+- **Features:**
+  - Two-pane layout: prompt list with category tabs (left) + full prompt view with copy/edit/use actions (right)
+  - Categories as horizontal tabs (All, Framework, Research, Meta, Custom...)
+  - Each prompt card shows: Title, one-line purpose, tags, hotkey badge if assigned
+  - Prominent green "Copy" button on every card (consistent with clipboard design)
+  - Create/Edit modal: name, category, content (textarea), hotkey (AHK format), tags
+  - Hotkey display: show as human-readable (Ctrl+Shift+1 not ^+1)
+  - Search across name, content, and tags
+  - Export/Import JSON
+  - localStorage key: `pof2828_prompts`
+- **Data Shape:**
+```json
+{
+  "id": "p_abc123",
+  "name": "Deep Laws Extraction",
+  "category": "Framework",
+  "content": "Run /DEEPER then /INTEGRATE on this passage...",
+  "hotkey": "^+1",
+  "tags": ["framework", "extraction", "deeper"],
+  "created_at": "2026-03-10T12:00:00Z"
+}
+```
+
+### Tool 3: Research Links (TO BUILD)
+- **File:** `research_links.html`
+- **Features:**
+  - Two-pane layout: bookmark list with category tabs (left) + link detail with preview/notes (right)
+  - Categories: Theophysics, Infrastructure, Research, Consciousness, Physics, General
+  - Color-coded cards by category (gold, blue, green, purple, cyan, gray)
+  - Each card: Title, URL (truncated), tags, action row (Open, Copy URL, Edit, Delete)
+  - "Open" button launches URL in new tab
+  - Notes field per bookmark (for personal annotations)
+  - Search across title, URL, tags, and notes
+  - Export/Import JSON
+  - localStorage key: `pof2828_bookmarks`
+- **Data Shape:**
+```json
+{
+  "id": "b_xyz789",
+  "title": "Global Consciousness Project",
+  "url": "https://noosphere.princeton.edu",
+  "category": "Consciousness",
+  "tags": ["gcp", "coherence", "6sigma"],
+  "notes": "325+ replicas, 6sigma through 2010. Key evidence for global psi-field.",
+  "created_at": "2026-03-10T12:00:00Z"
+}
+```
+
+### Tool 4: Notes / Scratch Pad (TO BUILD)
+- **File:** `notes.html`
+- **Features:**
+  - Two-pane: note list (left) + editor (right)
+  - Markdown-aware textarea with preview toggle
+  - Auto-save to localStorage on every keystroke (debounced 500ms)
+  - Tags, pinning, search
+  - "Send to Clipboard" button (copies content, also stores in clipboard localStorage if same browser)
+  - Timestamp tracking (created, last modified)
+  - Export individual note as .md or all notes as JSON
+  - localStorage key: `pof2828_notes`
+- **Data Shape:**
+```json
+{
+  "id": "n_def456",
+  "title": "Auto-generated from first line",
+  "content": "Full markdown content...",
+  "tags": ["trinity", "proof"],
+  "pinned": false,
+  "created_at": "2026-03-10T12:00:00Z",
+  "updated_at": "2026-03-10T14:30:00Z"
+}
+```
+
+---
+
+## PHASE 2: LOCAL HUB DASHBOARD
+
+### File: `theophysics-hub.html`
+- **Location:** Same Startup folder, or shortcut on Desktop
+- **Purpose:** Single entry point that unifies all tools into one tabbed interface
+
+### Architecture
+The hub is a single HTML file with tabbed navigation. Each tab contains the full tool UI inline (not iframes). All tools share the same localStorage but use different keys (no collisions).
+
+### Tabs
+1. **Knowledge** — Research threads, concept graph placeholder, publication tracker, breakthroughs feed. Data from `pof2828_notes` and `pof2828_bookmarks`.
+2. **Clipboard** — Full clipboard manager (same as standalone, embedded).
+3. **Functions** — Prompt picker + Research links as sub-panels. Ingest placeholder. Infrastructure status.
+4. **Notes** — Full notes/scratch pad with markdown preview.
+5. **Settings** — Export/Import all data as single JSON bundle. Gateway URL configuration. Theme preferences.
+
+### Design Reference
+Use the existing `dist/index.html` from `ahk-dashboard-main` as the design template. It already has:
+- Five-tab navigation in the topbar
+- Three-column clipboard layout (sidebar, cards, detail)
+- Knowledge graph canvas
+- Functions grid with tiles
+- Comms hub channel view
+- Swarm pipeline visualization
+- Complete brand system with all colors, fonts, spacing
+
+Adapt that layout but replace all hardcoded demo data with real localStorage reads.
+
+### Hub Data Bundle (for Settings export)
+```json
+{
+  "version": "1.0",
+  "exported_at": "2026-03-10T12:00:00Z",
+  "clips": [...],
+  "prompts": [...],
+  "bookmarks": [...],
+  "notes": [...]
+}
+```
+
+---
+
+## PHASE 3: CLOUDFLARE PWA + AI
+
+### What Makes HTML into a PWA
+
+A PWA (Progressive Web App) is just an HTML page plus two files:
+
+**1. manifest.json** — tells the browser this is an installable app:
+```json
+{
+  "name": "Theophysics Hub",
+  "short_name": "TheoPhy",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0a0a0f",
+  "background_color": "#0a0a0f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+```
+
+**2. sw.js** — service worker that caches files for offline use:
+```javascript
+const CACHE = 'theophy-v1';
+const ASSETS = ['/', '/index.html', '/css/theme.css', '/js/app.js'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+```
+
+**3. Register in HTML:**
+```html
+<link rel="manifest" href="/manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+</script>
+```
+
+That is the entire difference between "HTML file" and "PWA." The HTML, CSS, and JavaScript are identical.
+
+### Deployment Target
+- **Host:** Cloudflare Pages (`theophysics-hub.pages.dev` or custom domain)
+- **Backend:** Cloudflare Workers (existing + new gateway)
+- **Storage:** Cloudflare D1 (relational), KV (key-value), R2 (objects/files)
+
+### Existing Cloudflare Infrastructure
+
+| Worker | Purpose | Key Endpoints |
+|--------|---------|---------------|
+| theophysics-swarm | 4 AI managers (Orchestrator, Evidence, Structure, Execution) | /swarm/analyze, /swarm/upload, /swarm/projects, /swarm/memories |
+| ai-comms-hub | AI-to-AI channels (opus, haiku, gemini, chatgpt) | /channels, /channel/:name, /broadcast, /log/daily/:date |
+| forge-ingest-api | File upload, processing, media ingestion | /api/upload-url, /api/jobs, /api/library |
+| smart-crawler | Web research, URL scraping, multi-perspective synthesis | /api/discover, /api/scrape, /api/deep-crawl, /api/research |
+| clipsync-api-production | Clipboard sync across devices | clips CRUD |
+| prophecy-intel-api | Prophecy intelligence analysis (31MB D1 DB) | research/analysis endpoints |
+
+**Storage:**
+- 15 KV namespaces (CLIPS, SEARCH_HISTORY, LINKS, PROPHECY_KV, etc.)
+- 18 D1 databases (theophysics-comms, forge-ingest, clipsync-db, prophecy-intel-prod 31MB, theophysics-pipeline 13MB, bible_data 10MB, etc.)
+- 20 R2 buckets (theophysics-vault, theophysics-files, ingest-inputs, ingest-outputs, clipsync-storage, prophecy-articles, obsidian, etc.)
+
+### New: API Gateway Worker
+
+One new Cloudflare Worker that sits in front of everything. The PWA calls ONE URL.
+
+**Routes:**
+```
+/api/clips/*        → clipsync-api-production
+/api/comms/*        → ai-comms-hub
+/api/swarm/*        → theophysics-swarm
+/api/ingest/*       → forge-ingest-api
+/api/research/*     → smart-crawler
+/api/intel/*        → prophecy-intel-api
+/api/prompts/*      → new D1 tables (prompts CRUD)
+/api/bookmarks/*    → new D1 tables (bookmarks CRUD)
+/api/notes/*        → new D1 tables (notes CRUD)
+/api/config/*       → gateway settings (feature toggles, URLs)
+/api/pages/*        → dynamic page management (AI can create tabs)
+/api/graph/*        → knowledge graph (nodes + edges in D1)
+```
+
+**Gateway responsibilities:**
+- Auth (API key or token, one place to configure)
+- CORS (one config for all Workers)
+- Caching and rate limiting
+- Feature toggles (enable/disable tabs dynamically)
+- Script upload (accept JS, deploy as new route)
+
+### Dual-Mode Data Layer
+
+Every tool has this pattern:
+
+```javascript
+const GATEWAY = localStorage.getItem('pof2828_gateway_url') || null;
+
+async function saveClip(clip) {
+  // Always save locally first (instant)
+  const clips = getLocal('pof2828_clips');
+  clips.unshift(clip);
+  setLocal('pof2828_clips', clips);
+
+  // If gateway configured, sync to Cloudflare in background
+  if (GATEWAY) {
+    fetch(`${GATEWAY}/api/clips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clip)
+    }).catch(() => {
+      // Queue for retry
+      queueSync('clips', 'create', clip);
+    });
+  }
+}
+```
+
+localStorage is always the source of truth for speed. Cloudflare is the backup, the cross-device sync, and the AI access layer.
+
+### New: MCP Server Worker
+
+A Cloudflare Worker that speaks Model Context Protocol. Any AI (Claude, Cursor, etc.) connects and gets full system access.
+
+**Tools exposed:**
+- Clipboard: list_clips, create_clip, delete_clip, search_clips
+- Prompts: list_prompts, create_prompt, edit_prompt, delete_prompt
+- Bookmarks: list_bookmarks, create_bookmark, edit_bookmark, delete_bookmark
+- Notes: list_notes, create_note, edit_note, delete_note, search_notes
+- Comms: send_message, read_channel, broadcast
+- Swarm: analyze_content, upload_to_swarm, list_projects, read_memories
+- Ingest: start_ingest, check_job, download_result
+- Crawler: discover_queries, scrape_url, deep_crawl, research
+- Graph: query_knowledge_graph, add_node, add_edge, find_path
+- Pages: list_pages, create_page, edit_page, delete_page (AI can create new tabs)
+- Config: get_config, set_config, toggle_feature
+- Deploy: deploy_script (upload and deploy new functionality)
+
+The MCP server calls the same gateway, so behavior is identical to the UI.
+
+### Knowledge Graph (D1)
+
+**Nodes table:**
+```sql
+CREATE TABLE nodes (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  type TEXT NOT NULL, -- concept, paper, verse, law, breakthrough, axiom
+  description TEXT,
+  metadata TEXT, -- JSON: tier, sigma, source, etc.
+  created_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+**Edges table:**
+```sql
+CREATE TABLE edges (
+  id TEXT PRIMARY KEY,
+  source_id TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  relationship TEXT NOT NULL, -- supports, contradicts, extends, references, derives
+  weight REAL DEFAULT 1.0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (source_id) REFERENCES nodes(id),
+  FOREIGN KEY (target_id) REFERENCES nodes(id)
+);
+```
+
+**Visualization:** d3-force or vis-network on a canvas element. Nodes colored by type, draggable, zoomable. Click a node to see connections.
+
+**AI integration:** When the swarm analyzes content, it auto-creates nodes and edges. The graph grows organically.
+
+### Dynamic Pages (AI-Created Tabs)
+
+**Page registry (D1):**
+```sql
+CREATE TABLE pages (
+  id TEXT PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  icon TEXT DEFAULT '📄',
+  tab_order INTEGER DEFAULT 99,
+  html_content TEXT,
+  css_content TEXT,
+  js_content TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+The PWA fetches `/api/pages` on load and renders extra tabs. The 6 core tabs are always there. AI-created pages appear as additional tabs.
+
+### AI Behavior Specification
+
+The AI system on Cloudflare should:
+
+1. **Always be learning.** Every clip, note, and bookmark gets analyzed. Patterns get detected. The knowledge graph grows continuously.
+
+2. **Always be organizing.** Auto-tag untagged clips. Suggest categories. Surface connections between notes and bookmarks. Flag duplicates.
+
+3. **Check David's work.** When new content enters (via clipboard, notes, or ingest), compare against existing axioms and framework. Flag contradictions. Surface supporting evidence. Run /PROBE equivalent.
+
+4. **Build things.** The AI can create new pages (via dynamic pages system), deploy web content to Cloudflare Pages, and generate reports. The MCP interface gives full programmatic access.
+
+5. **Get information.** Via smart-crawler, the AI can search the web, scrape URLs, and do multi-perspective research synthesis. Results get stored in the knowledge graph.
+
+6. **Communicate (Phase 3b).** Via ai-comms-hub, different AI instances share findings. Daily log compression keeps context manageable.
+
+---
+
+## BRAND SPECIFICATION
+
+### Colors
+```css
+:root {
+  --bg: #0B0C0F;
+  --surface: #11131A;
+  --surface2: #181B26;
+  --border: rgba(244, 246, 255, 0.08);
+  --text: #F4F6FF;
+  --muted: #8A8F9E;
+  --gold: #F2C94C;
+  --blue: #4F8EF7;
+  --green: #4ECB71;
+  --purple: #9B7FE8;
+  --red: #E05C6E;
+  --cyan: #06b6d4;
+  --orange: #F6821F;
+}
+```
+
+### Typography
+- **Headers/Brand:** IBM Plex Mono or JetBrains Mono
+- **Body:** System font stack (-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)
+- **Base size:** 13px, line-height 1.55
+- **Monospace accents:** Labels, badges, metadata
+
+### Components
+- Cards: `background: var(--surface)`, `border: 1px solid var(--border)`, `border-radius: 9-11px`, `padding: 11-14px`
+- Badges: `font-size: 9px`, `padding: 2px 6px`, `border-radius: 9px`, colored per type
+- Buttons: Ghost style by default, filled for primary actions (gold bg, dark text)
+- Toast: Fixed bottom-right, gold border, monospace text
+
+---
+
+## BUILD ORDER
+
+1. **Prompt Picker** (standalone HTML, same design as clipboard)
+2. **Research Links** (standalone HTML, same design)
+3. **Notes** (standalone HTML, same design)
+4. **Hub Dashboard** (single HTML, unifies all tools, modeled on dist/index.html from Emma project)
+5. **Gateway Worker** (Cloudflare, routes to all existing Workers, adds prompts/bookmarks/notes D1 tables)
+6. **Dual-mode sync** (add GATEWAY_URL support to each tool)
+7. **PWA wrapper** (manifest.json + sw.js + deploy to Cloudflare Pages)
+8. **Knowledge Graph** (D1 schema + d3-force visualization)
+9. **Dynamic Pages** (page registry + AI tab creation)
+10. **MCP Server** (wraps all gateway routes as tools)
+11. **AI Learning Loop** (auto-tag, pattern detection, contradiction checking, graph growth)
+
+---
+
+## FILE STRUCTURE (Final)
+
+```
+theophysics-hub/
+├── standalone/                     # Phase 1 — drop in Startup folder
+│   ├── clipboard.html              # DONE
+│   ├── prompt_picker.html          # Next
+│   ├── research_links.html         # Next
+│   └── notes.html                  # Next
+├── hub/                            # Phase 2 — unified local dashboard
+│   └── theophysics-hub.html        # All-in-one tabbed hub
+├── frontend/                       # Phase 3 — Cloudflare Pages
+│   ├── index.html                  # PWA shell
+│   ├── manifest.json
+│   ├── sw.js
+│   ├── css/
+│   │   └── theme.css               # Brand variables + base styles
+│   ├── js/
+│   │   ├── app.js                  # Tab router, page loader
+│   │   ├── api.js                  # Gateway client (single URL)
+│   │   ├── sync.js                 # Dual-mode data layer
+│   │   └── tabs/
+│   │       ├── knowledge.js
+│   │       ├── clipboard.js
+│   │       ├── functions.js
+│   │       ├── notes.js
+│   │       ├── comms.js
+│   │       └── swarm.js
+│   └── icons/
+│       ├── icon-192.png
+│       └── icon-512.png
+├── gateway/                        # New Cloudflare Worker
+│   ├── src/index.js
+│   └── wrangler.toml
+├── mcp-server/                     # New Cloudflare Worker
+│   ├── src/index.js
+│   └── wrangler.toml
+└── docs/
+    └── DEPLOYMENT_GUIDE.md         # This document
+```
+
+---
+
+## WINDOWS STARTUP DEPLOYMENT
+
+To auto-launch tools on Windows boot:
+
+**Startup folder path:**
+```
+C:\Users\lowes\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+```
+
+**Option A — Direct HTML files:**
+Copy `clipboard.html`, `prompt_picker.html`, `research_links.html`, `notes.html` directly into the Startup folder. Each opens in a new browser tab on boot.
+
+**Option B — Single launcher (recommended):**
+Create `launch_hub.bat` in the Startup folder:
+```batch
+@echo off
+start "" "C:\Tools\Theophysics\theophysics-hub.html"
+```
+This opens one unified dashboard instead of four separate tabs.
+
+**Option C — PWA shortcut (Phase 3):**
+After deploying to Cloudflare Pages, install the PWA from Chrome (three-dot menu > "Install Theophysics Hub"). The installed PWA can be added to Startup as a shortcut.
+
+---
+
+## MIGRATION PATH
+
+### From Standalone to Cloudflare
+
+1. Each standalone tool already stores data in localStorage with prefixed keys.
+2. The hub's Settings tab has an "Export All" button that bundles everything into one JSON.
+3. The Cloudflare gateway has a `/api/import` endpoint that accepts this bundle and populates D1.
+4. Once imported, set `GATEWAY_URL` in Settings. Tools start syncing.
+5. Going forward, localStorage = instant reads, Cloudflare = backup + cross-device + AI access.
+6. If Cloudflare is unreachable, tools continue working from localStorage (offline-first).
+
+### From ClipSync localhost to Cloudflare
+
+The existing clipboard, prompt picker, and research links HTML files pointed to `http://localhost:3456/api`. The new standalone versions use localStorage instead. When Phase 3 deploys, they point to `theophysics-gateway.workers.dev/api` — same API shape, different URL. Existing ClipSync Worker data can be migrated via the gateway's import endpoint.
+
+---
+
+## KEY DECISIONS
+
+1. **No frameworks.** Vanilla HTML/CSS/JS everywhere. Any AI can read and modify it. No build step for Phase 1-2.
+2. **localStorage first.** Always the source of truth. Cloudflare is additive, never required.
+3. **One gateway.** PWA and MCP server both call the same URL. Behavior is identical.
+4. **AI creates pages.** The dynamic pages system means the AI can extend the dashboard without human code changes.
+5. **Everything goes through clipboard.** The clipboard manager is the central nervous system. Notes, prompts, research links, and AI outputs all flow through it.
+
+---
+
+## OWNER
+
+David Lowe · POF 2828
+theophysics.pro · faiththruphysics.com
