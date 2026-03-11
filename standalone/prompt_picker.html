@@ -2,488 +2,571 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POF 2828 — Prompt Picker</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121c;
-    --surface2: #1a1a25;
-    --border: #1e1e2e;
-    --border-hover: #2a2a3e;
-    --text: #c8ccd4;
-    --text-dim: #666680;
-    --text-bright: #e8ecf4;
-    --accent: #4a6fa5;
-    --gold: #f59e0b;
-    --green: #10b981;
-    --red: #ef4444;
-    --purple: #8b5cf6;
-    --blue: #3b82f6;
-    --toast-bg: #f59e0b;
-    --toast-text: #000;
+    --bg: #08080c;
+    --pane: #0e0e14;
+    --card: #13131b;
+    --card-hover: #171721;
+    --card-selected: #161625;
+    --border: #1c1c28;
+    --border-sel: #2d2d48;
+    --text: #b8bcc6;
+    --text-secondary: #6a6a80;
+    --bright: #dde0e8;
+    --gold: #e8a912;
+    --gold-dim: rgba(232, 169, 18, .12);
+    --green: #2ecc8e;
+    --green-dim: rgba(46, 204, 142, .10);
+    --red: #d44;
+    --cyan: #4ac4d4;
+    --cyan-dim: rgba(74, 196, 212, .08);
+    --purple: #8070c8;
+    --purple-dim: rgba(128, 112, 200, .08);
+    --font: 'DM Mono', 'Menlo', monospace;
+    --fs: 13px;
+    --lh: 1.55;
+    --radius: 6px;
   }
 
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #222230; border-radius: 3px; }
 
   body {
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    font-family: var(--font);
+    font-size: var(--fs);
+    line-height: var(--lh);
     background: var(--bg);
     color: var(--text);
     height: 100vh;
-    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
   }
 
-  /* ============ HEADER ============ */
-  .header {
-    padding: 12px 16px 10px;
-    border-bottom: 1px solid var(--border);
-    background: #0d0d14;
-    flex-shrink: 0;
-  }
-  .header-top {
+  /* ───────── TOPBAR ───────── */
+  .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .brand {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .brand-tag {
-    font-size: 10px; letter-spacing: 3px; color: var(--gold); font-weight: 700;
-  }
-  .brand-sep { font-size: 11px; color: #2a2a3a; }
-  .brand-sub { font-size: 10px; letter-spacing: 2px; color: #444; }
-
-  .header-actions {
-    display: flex; gap: 6px;
-  }
-  .hdr-btn {
-    background: transparent; border: 1px solid #2a2a3a; color: #555;
-    padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: inherit;
-    cursor: pointer; letter-spacing: 1px; transition: all 0.12s ease;
-  }
-  .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .hdr-btn.active { background: rgba(16,185,129,0.12); border-color: var(--green); color: var(--green); }
-
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
-    background: var(--green); margin-right: 4px;
-    box-shadow: 0 0 6px var(--green);
-  }
-  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
-
-  /* ============ SEARCH ============ */
-  .search-wrap { position: relative; }
-  .search-icon {
-    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-    color: #3a3a4a; pointer-events: none; font-size: 14px;
-  }
-  .search-input {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 9px 12px 9px 32px; color: var(--text);
-    font-size: 13px; font-family: inherit; outline: none;
-    transition: border-color 0.15s;
-  }
-  .search-input:focus { border-color: var(--accent); }
-  .search-input::placeholder { color: #333; }
-
-  /* ============ TABS ============ */
-  .tabs {
-    display: flex; gap: 2px; padding: 8px 16px 0;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--pane);
     border-bottom: 1px solid var(--border);
-    background: var(--bg);
-    overflow-x: auto;
     flex-shrink: 0;
   }
-  .tab {
-    padding: 6px 14px 8px; font-size: 10px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--text-dim); cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all 0.12s; white-space: nowrap;
-    font-family: inherit; background: none; border-top: none; border-left: none; border-right: none;
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
   }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .brand-name { font-weight: 500; color: var(--gold); letter-spacing: 2px; }
+  .brand-label { color: var(--text-secondary); letter-spacing: 1px; }
+  .topbar-sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+  .search-wrap { flex: 1; position: relative; max-width: 360px; }
+  .search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px 7px 30px;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: #2e2e3e; }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%;
+    transform: translateY(-50%); color: #2e2e3e; pointer-events: none;
+  }
+  .topbar-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+  .top-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-secondary); padding: 6px 12px;
+    border-radius: var(--radius); font: inherit; cursor: pointer;
+    transition: all .12s; white-space: nowrap;
+  }
+  .top-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .top-btn.primary {
+    background: var(--gold); color: #000;
+    border-color: var(--gold); font-weight: 500;
+  }
+  .top-btn.primary:hover { filter: brightness(1.1); }
 
-  /* ============ CARD LIST ============ */
-  .card-list {
-    flex: 1; overflow-y: auto; padding: 12px 16px; display: flex;
-    flex-direction: column; gap: 8px;
+  /* ───────── FILTER TABS ───────── */
+  .filter-bar {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 16px; background: var(--pane);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .filter-tab {
+    padding: 5px 12px; background: none; border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary); font: inherit; cursor: pointer;
+    transition: all .1s; white-space: nowrap;
+  }
+  .filter-tab:hover { color: var(--text); }
+  .filter-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .filter-count { margin-left: auto; color: var(--text-secondary); }
+
+  /* ───────── TWO-PANE BODY ───────── */
+  .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+  /* LEFT: PROMPT LIST */
+  .list-pane {
+    width: 420px; min-width: 320px; max-width: 50%;
+    border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--bg);
   }
 
   .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 12px 14px; cursor: pointer;
-    transition: all 0.08s ease; position: relative;
+    padding: 14px 16px; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; transition: all .1s;
   }
-  .card:hover { background: #14141e; border-color: var(--border-hover); }
-  .card:active { transform: scale(0.99); }
-  .card.selected { border-color: var(--accent); background: #14142a; }
-
+  .card:hover { background: var(--card-hover); border-color: var(--border-sel); }
+  .card.selected {
+    background: var(--card-selected);
+    border-color: var(--border-sel);
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
   .card-title {
-    font-size: 13px; font-weight: 700; color: var(--text-bright);
-    margin-bottom: 4px; line-height: 1.3;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-weight: 500; color: var(--bright);
+    margin-bottom: 3px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
   }
-  .card-preview {
-    font-size: 11px; color: var(--text-dim); line-height: 1.5;
-    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
-    overflow: hidden; margin-bottom: 8px;
+  .card-purpose {
+    color: var(--text-secondary); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+    margin-bottom: 8px;
   }
-  .card-tags {
-    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;
-  }
-  .tag-pill {
-    font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
-    padding: 2px 8px; border-radius: 3px; background: #15151f;
-    color: var(--text-dim); border: 1px solid #1e1e2e;
+  .card-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    padding: 2px 8px; background: var(--cyan-dim); color: var(--cyan);
+    border: 1px solid rgba(74, 196, 212, .15); border-radius: 3px;
+    letter-spacing: .5px; text-transform: uppercase; font-size: 11px;
   }
   .hotkey-badge {
-    font-size: 8px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px;
-    background: rgba(245,158,11,0.12); color: var(--gold);
-    border: 1px solid rgba(245,158,11,0.3); font-weight: 600;
+    padding: 2px 8px; background: var(--gold-dim); color: var(--gold);
+    border-radius: 3px; font-size: 11px;
+  }
+  .cat-badge {
+    padding: 2px 8px; background: var(--purple-dim); color: var(--purple);
+    border-radius: 3px; font-size: 11px;
+  }
+  .card-time { margin-left: auto; color: #2e2e3e; }
+  .card-actions { display: flex; gap: 4px; margin-top: 10px; }
+  .card-btn {
+    padding: 5px 14px; background: transparent;
+    border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-secondary); font: inherit; cursor: pointer;
+    transition: all .1s;
+  }
+  .card-btn:hover { border-color: #3a3a50; color: var(--text); }
+  .card-btn:active { transform: scale(.96); }
+  .card-btn.copy-btn {
+    background: var(--green-dim);
+    border-color: rgba(46, 204, 142, .25);
+    color: var(--green); font-weight: 500; flex: 1;
+  }
+  .card-btn.copy-btn:hover { background: rgba(46, 204, 142, .18); }
+
+  /* RIGHT: DETAIL VIEW */
+  .detail-pane {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; background: var(--pane);
+  }
+  .detail-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #222230; text-align: center; padding: 40px; gap: 8px;
+  }
+  .detail-empty .sub { color: #1a1a28; }
+
+  .detail-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); }
+  .detail-title {
+    font-weight: 500; color: var(--bright);
+    margin-bottom: 8px; word-break: break-word;
+  }
+  .detail-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .detail-actions {
+    display: flex; gap: 6px; padding: 14px 24px;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .det-btn {
+    padding: 8px 18px; background: transparent;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-secondary); font: inherit; cursor: pointer;
+    transition: all .1s;
+  }
+  .det-btn:hover { border-color: #3a3a50; color: var(--text); }
+  .det-btn:active { transform: scale(.97); }
+  .det-btn.copy-main {
+    background: var(--green); border-color: var(--green);
+    color: #000; font-weight: 500;
+  }
+  .det-btn.copy-main:hover { filter: brightness(1.1); }
+  .det-btn.danger { color: var(--red); border-color: rgba(221, 68, 68, .25); }
+  .det-btn.danger:hover { background: rgba(221, 68, 68, .08); }
+
+  .detail-content {
+    flex: 1; padding: 20px 24px; white-space: pre-wrap;
+    word-break: break-word; color: var(--text);
+    background: var(--bg); margin: 16px 24px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow-y: auto; min-height: 120px;
   }
 
-  /* ============ ACTION BUTTONS (BIG for thumbs) ============ */
-  .card-actions {
-    display: flex; gap: 6px; flex-wrap: wrap;
-  }
-  .action-btn {
-    display: flex; align-items: center; justify-content: center; gap: 4px;
-    min-width: 52px; min-height: 44px; padding: 8px 14px;
-    border-radius: 5px; border: 1px solid #2a2a3a; background: transparent;
-    color: var(--text-dim); font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; font-family: inherit; cursor: pointer;
-    transition: all 0.1s ease; font-weight: 500;
-  }
-  .action-btn:active { transform: scale(0.95); }
-  .action-btn.copy {
-    border-color: rgba(16,185,129,0.4); color: var(--green); flex: 1;
-  }
-  .action-btn.copy:hover { background: rgba(16,185,129,0.12); }
-  .action-btn.edit { border-color: rgba(59,130,246,0.4); color: var(--blue); }
-  .action-btn.edit:hover { background: rgba(59,130,246,0.12); }
-  .action-btn.share { border-color: rgba(139,92,246,0.4); color: var(--purple); }
-  .action-btn.share:hover { background: rgba(139,92,246,0.12); }
-  .action-btn.delete { border-color: rgba(239,68,68,0.3); color: #884444; }
-  .action-btn.delete:hover { background: rgba(239,68,68,0.08); color: var(--red); }
-  .action-btn .icon { font-size: 16px; }
+  .list-empty { text-align: center; padding: 40px 16px; color: #2e2e3e; }
 
-  /* ============ MODAL (Create/Edit) ============ */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-    z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  /* ───────── MODAL ───────── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, .72); z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
   }
-  .modal-overlay.open { display: flex; }
+  .modal-bg.open { display: flex; }
   .modal {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 20px; width: 100%; max-width: 520px;
-    max-height: 85vh; overflow-y: auto;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 22px; width: 100%;
+    max-width: 500px; max-height: 85vh; overflow-y: auto;
   }
   .modal h2 {
-    font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--gold); margin-bottom: 16px; font-weight: 600;
+    font-weight: 500; color: var(--gold);
+    letter-spacing: 2px; margin-bottom: 16px;
   }
   .modal label {
-    display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--text-dim); margin-bottom: 4px; margin-top: 12px;
+    display: block; color: var(--text-secondary);
+    letter-spacing: 1px; text-transform: uppercase;
+    margin: 12px 0 4px; font-size: 11px;
   }
-  .modal input, .modal textarea, .modal select {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 5px; padding: 10px 12px; color: var(--text);
-    font-size: 13px; font-family: inherit; outline: none;
+  .modal input, .modal textarea {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 9px 12px; color: var(--text);
+    font: inherit; outline: none; transition: border-color .15s;
   }
-  .modal textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
-  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
-  .modal-actions {
-    display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;
+  .modal textarea { min-height: 140px; resize: vertical; }
+  .modal input:focus, .modal textarea:focus { border-color: var(--gold); }
+  .modal-row {
+    display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end;
   }
-  .modal-btn {
-    padding: 10px 24px; border-radius: 5px; font-size: 11px; font-family: inherit;
-    letter-spacing: 1px; cursor: pointer; font-weight: 600; min-height: 44px;
-    border: 1px solid var(--border);
+  .mbtn {
+    padding: 9px 20px; border-radius: var(--radius);
+    font: inherit; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border); transition: all .1s;
   }
-  .modal-btn.save { background: var(--green); color: #000; border-color: var(--green); }
-  .modal-btn.cancel { background: transparent; color: var(--text-dim); }
+  .mbtn.save { background: var(--green); color: #000; border-color: var(--green); }
+  .mbtn.save:hover { filter: brightness(1.1); }
+  .mbtn.cancel { background: transparent; color: var(--text-secondary); }
+  .mbtn.cancel:hover { border-color: #3a3a50; }
 
-  /* ============ TOAST ============ */
+  /* ───────── TOAST ───────── */
   .toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: var(--toast-bg); color: var(--toast-text); padding: 8px 20px;
-    border-radius: 5px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    font-weight: 700; font-family: inherit; z-index: 200;
-    transition: transform 0.2s ease; pointer-events: none;
+    position: fixed; bottom: 18px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--gold); color: #000;
+    padding: 7px 22px; border-radius: 5px;
+    font-weight: 500; letter-spacing: 1.5px;
+    z-index: 200; transition: transform .18s ease; pointer-events: none;
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  /* ============ EMPTY STATE ============ */
-  .empty-state {
-    text-align: center; padding: 40px 20px; color: var(--text-dim);
-  }
-  .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
-  .empty-state p { font-size: 12px; letter-spacing: 1px; }
-
-  /* ============ MOBILE ============ */
-  @media (max-width: 480px) {
-    .card-actions { gap: 4px; }
-    .action-btn { min-height: 48px; font-size: 11px; padding: 10px 12px; }
-    .action-btn.copy { flex: 2; }
-    .card { padding: 14px 12px; }
-    .card-title { font-size: 14px; }
-    .card-preview { font-size: 12px; }
+  /* ───────── MOBILE ───────── */
+  @media (max-width: 720px) {
+    .list-pane { width: 100%; max-width: 100%; border-right: none; }
+    .detail-pane { display: none; }
+    .body-wrap.detail-open .list-pane { display: none; }
+    .body-wrap.detail-open .detail-pane { display: flex; }
+    .back-btn { display: inline-block !important; }
   }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-top">
-    <div class="brand">
-      <span class="brand-tag">POF 2828</span>
-      <span class="brand-sep">|</span>
-      <span class="brand-sub">PROMPT PICKER</span>
-    </div>
-    <div class="header-actions">
-      <span class="status-dot" id="statusDot"></span>
-      <button class="hdr-btn" onclick="openCreateModal()">+ NEW</button>
-      <button class="hdr-btn" onclick="exportJSON()">EXPORT</button>
-    </div>
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-name">POF 2828</span>
+    <span class="brand-label">Prompt Picker</span>
   </div>
+  <div class="topbar-sep"></div>
   <div class="search-wrap">
-    <span class="search-icon">⌕</span>
-    <input type="text" class="search-input" id="searchInput"
-           placeholder="Search prompts..." autocomplete="off">
+    <span class="search-icon">&#x2315;</span>
+    <input class="search-input" id="searchInput" placeholder="Search prompts..." autocomplete="off">
+  </div>
+  <div class="topbar-actions">
+    <button class="top-btn" onclick="exportData()">Export</button>
+    <button class="top-btn" onclick="document.getElementById('fileInput').click()">Import</button>
+    <button class="top-btn primary" onclick="openAdd()">+ New</button>
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs" id="tabsContainer">
-  <button class="tab active" data-category="all">ALL</button>
+<div class="filter-bar" id="filterBar">
+  <button class="filter-tab active" data-f="all" onclick="setFilter('all')">All</button>
+  <span class="filter-count" id="filterCount"></span>
 </div>
 
-<!-- CARD LIST -->
-<div class="card-list" id="cardList"></div>
+<div class="body-wrap" id="bodyWrap">
+  <div class="list-pane" id="listPane"></div>
+  <div class="detail-pane" id="detailPane">
+    <div class="detail-empty">Select a prompt<span class="sub">Click any card to preview &middot; Double-click to copy</span></div>
+  </div>
+</div>
 
-<!-- CREATE/EDIT MODAL -->
-<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <h2 id="modalTitle">New Prompt</h2>
+    <h2 id="modalTitle">NEW PROMPT</h2>
     <input type="hidden" id="editId">
-
     <label>Name</label>
-    <input type="text" id="fieldName" placeholder="e.g. Steelman Objection">
-
+    <input id="fName" placeholder="e.g. Steelman Objection">
     <label>Category</label>
-    <input type="text" id="fieldCategory" placeholder="e.g. Framework, Research, General">
-
+    <input id="fCategory" placeholder="e.g. Framework, Research, General">
     <label>Content</label>
-    <textarea id="fieldContent" placeholder="The prompt content..."></textarea>
-
-    <label>Hotkey (AHK format, e.g. ^+1 = Ctrl+Shift+1)</label>
-    <input type="text" id="fieldHotkey" placeholder="Leave blank for no hotkey">
-
+    <textarea id="fContent" placeholder="The prompt content..."></textarea>
+    <label>Hotkey (e.g. Ctrl+Shift+1)</label>
+    <input id="fHotkey" placeholder="Leave blank for no hotkey">
     <label>Tags (comma separated)</label>
-    <input type="text" id="fieldTags" placeholder="e.g. framework, research, east">
-
-    <div class="modal-actions">
-      <button class="modal-btn cancel" onclick="closeModal()">CANCEL</button>
-      <button class="modal-btn save" onclick="savePrompt()">SAVE</button>
+    <input id="fTags" placeholder="e.g. framework, research">
+    <div class="modal-row">
+      <button class="mbtn cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn save" onclick="savePrompt()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
 
 <script>
-const STORE = 'pof2828_prompts';
-const GATEWAY = localStorage.getItem('pof2828_gateway_url') || null;
-let prompts = JSON.parse(localStorage.getItem(STORE) || '[]');
-let activeCategory = 'all';
-let searchQuery = '';
+const STORE='pof2828_prompts';
+let prompts=[], filter='all', search='', selIdx=-1;
 
-function persist() { localStorage.setItem(STORE, JSON.stringify(prompts)); }
-function syncStatus() { document.getElementById('statusDot').classList.toggle('offline', !GATEWAY); }
+function load(){ try { prompts=JSON.parse(localStorage.getItem(STORE))||[]; } catch { prompts=[]; } }
+function save(){ localStorage.setItem(STORE, JSON.stringify(prompts)); }
+function gid(){ return 'p_'+Math.random().toString(36).slice(2,8); }
 
-async function syncToGateway(method, path, payload) {
-  if (!GATEWAY) return;
-  try {
-    await fetch(`${GATEWAY}/api/${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: payload ? JSON.stringify(payload) : undefined,
-    });
-  } catch (_) {}
+function getCategories(){
+  const cats=new Set();
+  prompts.forEach(p=>{ if(p.category) cats.add(p.category); });
+  return ['all', ...cats];
 }
 
-function buildTabs() {
-  const cats = ['all', ...new Set(prompts.map(p => p.category || 'Custom'))];
-  const container = document.getElementById('tabsContainer');
-  container.innerHTML = cats.map(c =>
-    `<button class="tab${c === activeCategory ? ' active' : ''}" data-category="${esc(c)}" onclick="setCategory(${JSON.stringify(c)})">${esc(c.toUpperCase())}</button>`
-  ).join('');
+function renderAll(){ renderFilterBar(); renderList(); renderDetail(); renderCount(); }
+
+function renderFilterBar(){
+  const bar=document.getElementById('filterBar');
+  const cats=getCategories();
+  bar.innerHTML=cats.map(c=>{
+    const active=c===filter?' active':'';
+    return `<button class="filter-tab${active}" data-f="${esc(c)}" onclick="setFilter('${esc(c)}')">${esc(c==='all'?'All':c)}</button>`;
+  }).join('')+`<span class="filter-count" id="filterCount"></span>`;
 }
 
-function setCategory(cat) { activeCategory = cat; buildTabs(); render(); }
-
-function filteredPrompts() {
-  let filtered = prompts;
-  if (activeCategory !== 'all') {
-    filtered = filtered.filter(p => (p.category || 'Custom').toLowerCase() === activeCategory.toLowerCase());
-  }
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    filtered = filtered.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.content.toLowerCase().includes(q) ||
-      (p.tags || []).some(t => t.toLowerCase().includes(q))
-    );
-  }
-  return filtered;
+function getFiltered(){
+  let f=prompts;
+  if(filter!=='all') f=f.filter(p=>(p.category||'Custom').toLowerCase()===filter.toLowerCase());
+  if(search){ const q=search.toLowerCase(); f=f.filter(p=>
+    (p.name||'').toLowerCase().includes(q)||
+    (p.content||'').toLowerCase().includes(q)||
+    (p.tags||[]).some(t=>t.toLowerCase().includes(q))
+  ); }
+  return f;
 }
 
-function render() {
-  const list = document.getElementById('cardList');
-  const filtered = filteredPrompts();
-  if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${searchQuery ? 'No prompts match your search' : 'No prompts yet — click + NEW to create one'}</p></div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map(p => `
-    <div class="card" data-id="${p.id}">
-      <div class="card-title">${esc(p.name)}</div>
-      <div class="card-preview">${esc(p.content)}</div>
-      <div class="card-tags">
-        ${(p.tags || []).map(t => `<span class="tag-pill">${esc(t)}</span>`).join('')}
-        ${p.hotkey ? `<span class="hotkey-badge">${esc(formatHotkey(p.hotkey))}</span>` : ''}
+function renderList(){
+  const pane=document.getElementById('listPane'), f=getFiltered();
+  if(!f.length){ pane.innerHTML=`<div class="list-empty">${search?'No matches':'No prompts yet — click + New'}</div>`; return; }
+  pane.innerHTML=f.map(p=>{
+    const idx=prompts.indexOf(p);
+    const sel=idx===selIdx?' selected':'';
+    const hotkeyStr=p.hotkey?formatHotkey(p.hotkey):'';
+    return `<div class="card${sel}" onclick="selectPrompt(${idx})" ondblclick="copyIdx(${idx})">
+      <div class="card-title">${esc(p.name||'Untitled')}</div>
+      <div class="card-purpose">${esc((p.content||'').substring(0,90))}</div>
+      <div class="card-bottom">
+        ${p.category?`<span class="cat-badge">${esc(p.category)}</span>`:''}
+        ${hotkeyStr?`<span class="hotkey-badge">${esc(hotkeyStr)}</span>`:''}
+        ${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+        <span class="card-time">${timeAgo(p.created_at)}</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn copy" onclick="event.stopPropagation();copyPrompt('${p.id}')"><span class="icon">📋</span> COPY</button>
-        <button class="action-btn edit" onclick="event.stopPropagation();openEditModal('${p.id}')"><span class="icon">✏️</span> EDIT</button>
-        <button class="action-btn share" onclick="event.stopPropagation();sharePrompt('${p.id}')"><span class="icon">🔗</span></button>
-        <button class="action-btn delete" onclick="event.stopPropagation();deletePrompt('${p.id}')"><span class="icon">🗑️</span></button>
+        <button class="card-btn copy-btn" onclick="event.stopPropagation();copyIdx(${idx})">Copy</button>
+        <button class="card-btn" onclick="event.stopPropagation();openEdit(${idx})">Edit</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-async function copyPrompt(id) {
-  const p = prompts.find(x => x.id === id); if (!p) return;
-  await navigator.clipboard.writeText(p.content).catch(() => {});
-  showToast('COPIED TO CLIPBOARD');
-}
-
-function sharePrompt(id) {
-  const p = prompts.find(x => x.id === id); if (!p) return;
-  navigator.clipboard.writeText(JSON.stringify(p, null, 2)).catch(() => {});
-  showToast('JSON COPIED');
-}
-
-async function deletePrompt(id) {
-  const p = prompts.find(x => x.id === id); if (!p) return;
-  if (!confirm(`Delete "${p.name}"?`)) return;
-  prompts = prompts.filter(x => x.id !== id);
-  persist();
-  syncToGateway('DELETE', `prompts/${id}`);
-  buildTabs();
-  render();
-  showToast('DELETED');
-}
-
-function openCreateModal() {
-  document.getElementById('modalTitle').textContent = 'New Prompt';
-  document.getElementById('editId').value = '';
-  document.getElementById('fieldName').value = '';
-  document.getElementById('fieldCategory').value = '';
-  document.getElementById('fieldContent').value = '';
-  document.getElementById('fieldHotkey').value = '';
-  document.getElementById('fieldTags').value = '';
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function openEditModal(id) {
-  const p = prompts.find(x => x.id === id); if (!p) return;
-  document.getElementById('modalTitle').textContent = 'Edit Prompt';
-  document.getElementById('editId').value = p.id;
-  document.getElementById('fieldName').value = p.name;
-  document.getElementById('fieldCategory').value = p.category || '';
-  document.getElementById('fieldContent').value = p.content;
-  document.getElementById('fieldHotkey').value = p.hotkey || '';
-  document.getElementById('fieldTags').value = (p.tags || []).join(', ');
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-
-function savePrompt() {
-  const editId = document.getElementById('editId').value;
-  const data = {
-    id: editId || `p_${Math.random().toString(36).slice(2,8)}`,
-    name: document.getElementById('fieldName').value.trim(),
-    category: document.getElementById('fieldCategory').value.trim() || 'Custom',
-    content: document.getElementById('fieldContent').value.trim(),
-    hotkey: document.getElementById('fieldHotkey').value.trim() || null,
-    tags: document.getElementById('fieldTags').value.split(',').map(t => t.trim()).filter(Boolean),
-    created_at: new Date().toISOString(),
-  };
-  if (!data.name || !data.content) return showToast('NAME AND CONTENT REQUIRED');
-
-  if (editId) {
-    const idx = prompts.findIndex(p => p.id === editId);
-    if (idx >= 0) prompts[idx] = { ...prompts[idx], ...data };
-    syncToGateway('PUT', `prompts/${editId}`, data);
-  } else {
-    prompts.unshift(data);
-    syncToGateway('POST', 'prompts', data);
+function renderDetail(){
+  const pane=document.getElementById('detailPane');
+  if(selIdx<0||selIdx>=prompts.length){
+    pane.innerHTML=`<div class="detail-empty">Select a prompt<span class="sub">Click to preview &middot; Double-click to copy</span></div>`;
+    return;
   }
-
-  persist(); closeModal(); buildTabs(); render(); showToast(editId ? 'UPDATED' : 'CREATED');
+  const p=prompts[selIdx];
+  const hotkeyStr=p.hotkey?formatHotkey(p.hotkey):'';
+  pane.innerHTML=`
+    <div class="detail-header">
+      <button class="det-btn back-btn" style="display:none;margin-bottom:10px" onclick="closeMobileDetail()">&larr; Back</button>
+      <div class="detail-title">${esc(p.name||'Untitled')}</div>
+      <div class="detail-meta">
+        ${p.category?`<span class="cat-badge">${esc(p.category)}</span>`:''}
+        ${hotkeyStr?`<span class="hotkey-badge">${esc(hotkeyStr)}</span>`:''}
+        ${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+        <span class="card-time">${timeAgo(p.created_at)}</span>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="det-btn copy-main" onclick="copyIdx(${selIdx})">Copy to Clipboard</button>
+      <button class="det-btn" onclick="openEdit(${selIdx})">Edit</button>
+      <button class="det-btn danger" onclick="deletePrompt(${selIdx})">Delete</button>
+    </div>
+    <div class="detail-content">${esc(p.content)}</div>`;
 }
 
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `pof2828_prompts_${new Date().toISOString().slice(0,10)}.json`; a.click();
-  URL.revokeObjectURL(a.href); showToast('EXPORTED');
+function renderCount(){
+  const el=document.getElementById('filterCount');
+  if(el) el.textContent=getFiltered().length+' prompts';
 }
 
-function importJSON() {
-  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json';
-  input.onchange = async (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
+// ── ACTIONS ──
+function selectPrompt(idx){
+  selIdx=idx; renderList(); renderDetail();
+  if(window.innerWidth<=720) document.getElementById('bodyWrap').classList.add('detail-open');
+}
+function closeMobileDetail(){ document.getElementById('bodyWrap').classList.remove('detail-open'); }
+
+function copyIdx(idx){
+  if(idx>=0&&idx<prompts.length) copyText(prompts[idx].content);
+}
+function copyText(t){
+  if(!t) return;
+  navigator.clipboard.writeText(t).then(()=>toast('Copied')).catch(()=>{
+    const a=document.createElement('textarea'); a.value=t;
+    document.body.appendChild(a); a.select();
+    document.execCommand('copy'); document.body.removeChild(a); toast('Copied');
+  });
+}
+
+function deletePrompt(idx){
+  if(!confirm('Delete this prompt?')) return;
+  prompts.splice(idx,1);
+  if(selIdx>=prompts.length) selIdx=prompts.length-1;
+  save(); renderAll(); toast('Deleted');
+}
+
+function setFilter(f){ filter=f; renderAll(); }
+
+// ── MODAL ──
+function openAdd(){
+  document.getElementById('modalTitle').textContent='NEW PROMPT';
+  document.getElementById('editId').value='';
+  document.getElementById('fName').value='';
+  document.getElementById('fCategory').value='';
+  document.getElementById('fContent').value='';
+  document.getElementById('fHotkey').value='';
+  document.getElementById('fTags').value='';
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('fName').focus(),80);
+}
+function openEdit(idx){
+  const p=prompts[idx];
+  document.getElementById('modalTitle').textContent='EDIT PROMPT';
+  document.getElementById('editId').value=idx;
+  document.getElementById('fName').value=p.name||'';
+  document.getElementById('fCategory').value=p.category||'';
+  document.getElementById('fContent').value=p.content||'';
+  document.getElementById('fHotkey').value=p.hotkey||'';
+  document.getElementById('fTags').value=(p.tags||[]).join(', ');
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
+
+function savePrompt(){
+  const eidx=document.getElementById('editId').value;
+  const name=document.getElementById('fName').value.trim();
+  const content=document.getElementById('fContent').value.trim();
+  if(!name||!content){ toast('Name and content required'); return; }
+  const category=document.getElementById('fCategory').value.trim()||'Custom';
+  const hotkey=document.getElementById('fHotkey').value.trim()||null;
+  const tags=document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  if(eidx!==''){
+    const i=parseInt(eidx);
+    prompts[i].name=name; prompts[i].category=category;
+    prompts[i].content=content; prompts[i].hotkey=hotkey;
+    prompts[i].tags=tags; selIdx=i;
+  } else {
+    prompts.unshift({ id:gid(), name, category, content, hotkey, tags, created_at:new Date().toISOString() });
+    selIdx=0;
+  }
+  save(); closeModal(); renderAll(); toast(eidx!==''?'Updated':'Added');
+}
+
+// ── IMPORT/EXPORT ──
+function exportData(){
+  const b=new Blob([JSON.stringify(prompts,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+  a.download=`pof2828_prompts_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href); toast('Exported');
+}
+function handleImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader(); r.onload=function(ev){
     try {
-      const next = JSON.parse(await f.text());
-      prompts = Array.isArray(next) ? next : [];
-      persist(); buildTabs(); render(); showToast('IMPORTED');
-    } catch { showToast('INVALID JSON'); }
-  };
-  input.click();
+      const d=JSON.parse(ev.target.result);
+      if(Array.isArray(d)){ prompts=d; }
+      else throw 0;
+      save(); renderAll(); toast('Imported');
+    } catch { toast('Invalid file'); }
+  }; r.readAsText(file); e.target.value='';
 }
 
-function esc(s='') { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function formatHotkey(hk='') { return hk.replace(/\^/g,'Ctrl+').replace(/!/g,'Alt+').replace(/#/g,'Win+'); }
-function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('modalOverlay').classList.contains('open')) closeModal();
-  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); openCreateModal(); }
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeModal();
+  if(e.ctrlKey&&e.shiftKey&&e.key==='N'){ e.preventDefault(); openAdd(); }
+  if((e.key==='ArrowDown'||e.key==='ArrowUp')&&document.activeElement.tagName!=='TEXTAREA'&&document.activeElement.tagName!=='INPUT'){
+    const f=getFiltered(); if(!f.length) return; e.preventDefault();
+    const cur=f.indexOf(prompts[selIdx]);
+    const nxt=e.key==='ArrowDown'?(cur<f.length-1?cur+1:0):(cur>0?cur-1:f.length-1);
+    selIdx=prompts.indexOf(f[nxt]); renderList(); renderDetail();
+    const s=document.querySelector('.card.selected'); if(s) s.scrollIntoView({block:'nearest'});
+  }
+  if(e.key==='Enter'&&!document.getElementById('modalBg').classList.contains('open')&&
+    document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){
+    if(selIdx>=0&&selIdx<prompts.length) copyIdx(selIdx);
+  }
 });
-document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value; render(); });
 
-document.querySelector('.header-actions').insertAdjacentHTML('beforeend','<button class="hdr-btn" onclick="importJSON()">IMPORT</button>');
-syncStatus(); buildTabs(); render();
+document.getElementById('searchInput').addEventListener('input',e=>{ search=e.target.value; renderAll(); });
+
+// ── HELPERS ──
+function esc(s){ if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function formatHotkey(hk){ return (hk||'').replace(/\^/g,'Ctrl+').replace(/!/g,'Alt+').replace(/#/g,'Win+'); }
+function timeAgo(iso){ if(!iso) return '';
+  const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<60) return 'now'; if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h'; if(s<2592000) return Math.floor(s/86400)+'d';
+  return Math.floor(s/2592000)+'mo';
+}
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1400); }
+
+// ── INIT ──
+load(); renderAll();
 </script>
 </body>
 </html>

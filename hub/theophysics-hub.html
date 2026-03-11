@@ -270,30 +270,28 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <!-- ═══ CLIPBOARD ═══ -->
 <div class="view active" id="view-clipboard">
-  <div class="clip-sidebar">
+  <div class="clip-sidebar" id="clip-sidebar">
     <div class="cs-hd">
       <div class="cs-lbl">Clipboard Hub</div>
       <input class="cs-search" placeholder="🔍  Search…" oninput="filterCards(this.value)">
     </div>
     <div class="cs-gl">Browse</div>
-    <div class="cs-item a-gold" onclick="filterType('all',this,'a-gold')">📋 All Items <span class="cs-badge">142</span></div>
-    <div class="cs-item" onclick="filterType('pinned',this,'a-gold')">📌 Pinned <span class="cs-badge">11</span></div>
+    <div class="cs-item a-gold" onclick="filterType('all',this,'a-gold')">📋 All Items <span class="cs-badge" id="badge-all">0</span></div>
+    <div class="cs-item" onclick="filterType('pinned',this,'a-gold')">📌 Pinned <span class="cs-badge" id="badge-pinned">0</span></div>
     <div class="cs-div"></div>
-    <div class="cs-gl">By Type</div>
-    <div class="cs-item" onclick="filterType('clipboard',this,'a-gold')">✂️ Clipboard <span class="cs-badge">31</span></div>
-    <div class="cs-item" onclick="filterType('snippet',this,'a-blue')">📄 Snippets <span class="cs-badge">47</span></div>
-    <div class="cs-item" onclick="filterType('prompt',this,'a-purple')">💬 Prompts <span class="cs-badge">28</span></div>
-    <div class="cs-item" onclick="filterType('bookmark',this,'a-green')">🔖 Bookmarks <span class="cs-badge">36</span></div>
-    <div class="cs-div"></div>
-    <div class="cs-item" style="color:var(--purple)" onclick="filterType('agent',this,'a-purple')">🤖 AI Agent</div>
+    <div class="cs-gl">By Source</div>
+    <div class="cs-item" onclick="filterType('clip',this,'a-gold')">✂️ Clips <span class="cs-badge" id="badge-clip">0</span></div>
+    <div class="cs-item" onclick="filterType('prompt',this,'a-purple')">💬 Prompts <span class="cs-badge" id="badge-prompt">0</span></div>
+    <div class="cs-item" onclick="filterType('bookmark',this,'a-green')">🔖 Bookmarks <span class="cs-badge" id="badge-bookmark">0</span></div>
+    <div class="cs-item" onclick="filterType('note',this,'a-blue')">📝 Notes <span class="cs-badge" id="badge-note">0</span></div>
   </div>
 
   <div class="clip-main">
     <div class="cm-top">
-      <div class="cm-title" id="cm-title">All Items <span class="cm-count">#142</span></div>
+      <div class="cm-title" id="cm-title">All Items <span class="cm-count" id="cm-count">#0</span></div>
       <div class="cm-acts">
         <div class="cm-sort">Sort: Recent ▾</div>
-        <div class="cm-add" onclick="toast('New item — Phase 2 with D1 backend')">+ New</div>
+        <div class="cm-add" onclick="openNewClipModal()">+ New Clip</div>
       </div>
     </div>
     <div class="cm-cards" id="card-container"></div>
@@ -303,10 +301,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="cd-hd">Hub Status</div>
     <div class="cd-body">
       <div class="stat-row">
-        <div class="stat-chip"><div class="sc-val">142</div><div class="sc-lbl">Total Items</div></div>
-        <div class="stat-chip"><div class="sc-val">11</div><div class="sc-lbl">Pinned</div></div>
-        <div class="stat-chip"><div class="sc-val" style="color:var(--green)">Live</div><div class="sc-lbl">Clipboard</div></div>
-        <div class="stat-chip"><div class="sc-val" style="color:var(--purple)">∞</div><div class="sc-lbl">Memory</div></div>
+        <div class="stat-chip"><div class="sc-val" id="stat-total">0</div><div class="sc-lbl">Total Items</div></div>
+        <div class="stat-chip"><div class="sc-val" id="stat-pinned">0</div><div class="sc-lbl">Pinned</div></div>
+        <div class="stat-chip"><div class="sc-val" style="color:var(--green)">Live</div><div class="sc-lbl">localStorage</div></div>
+        <div class="stat-chip"><div class="sc-val" style="color:var(--purple)" id="stat-sources">4</div><div class="sc-lbl">Sources</div></div>
       </div>
       <div class="ag-mini">
         <div class="ag-hd"><div class="ag-dot"></div><div class="ag-name">Logos Agent</div><div class="ag-st">online</div></div>
@@ -315,20 +313,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       </div>
       <div>
         <div style="font-family:monospace;font-size:8px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Pinned Quick Access</div>
-        <div class="pin-item" onclick="toast('Master Equation copied!')"><div class="pi-ico">📐</div><div><div class="pi-txt">χ = ∭(G·M·E·S·T·K·R·Q·F·C) dxdydt</div><div class="pi-meta">Master Equation</div></div></div>
-        <div class="pin-item" onclick="toast('Moral Conservation copied!')"><div class="pi-ico">⚖️</div><div><div class="pi-txt">dE/dt = -αD(t) + βC(Ψ,χ) · Papers 9–10</div><div class="pi-meta">Moral Conservation Eq.</div></div></div>
-        <div class="pin-item" onclick="toast('System prompt copied!')"><div class="pi-ico">💬</div><div><div class="pi-txt">Theophysics system prompt v4.1</div><div class="pi-meta">Snippet · pinned</div></div></div>
-        <div class="pin-item" onclick="toast('Thread opened!')"><div class="pi-ico">🔭</div><div><div class="pi-txt">Trinity isomorphism — Feb 14 floor</div><div class="pi-meta">Research thread</div></div></div>
+        <div id="pinned-items"></div>
       </div>
       <div>
         <div style="font-family:monospace;font-size:8px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Data Sources</div>
         <div style="display:flex;flex-direction:column;gap:4px;font-size:10px;">
-          <div style="display:flex;align-items:center;gap:6px;color:var(--green)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>R2 bucket 10176 (daily log)</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--green)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>D1 — Session memory</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--green)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>Clipboard (live watch)</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--gold)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>Obsidian O:\_Theophysics_v3</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--blue)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>Notion — Opus Vault</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--muted2)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>Web search (on demand)</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--green)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>pof2828_clips (localStorage)</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--purple)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>pof2828_prompts (localStorage)</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--green)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>pof2828_bookmarks (localStorage)</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--blue)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></span>pof2828_notes (localStorage)</div>
         </div>
       </div>
     </div>
@@ -513,21 +506,102 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </div>
 
 </div><!-- /main -->
+
+<!-- New Clip Modal -->
+<div id="clipModalBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)closeClipModal()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">
+    <h2 style="font-weight:600;color:var(--gold);letter-spacing:2px;margin-bottom:16px;font-size:14px;" id="clipModalTitle">NEW CLIP</h2>
+    <input type="hidden" id="clipEditId">
+    <label style="display:block;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:12px 0 4px;font-size:10px;">Content</label>
+    <textarea id="clipContent" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font:inherit;outline:none;min-height:140px;resize:vertical;" placeholder="Paste or type content..."></textarea>
+    <label style="display:block;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:12px 0 4px;font-size:10px;">Tags (comma separated)</label>
+    <input id="clipTags" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font:inherit;outline:none;" placeholder="e.g. code, framework, url">
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">
+      <button onclick="closeClipModal()" style="padding:9px 20px;border-radius:6px;font:inherit;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+      <button onclick="saveNewClip()" style="padding:9px 20px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#000;">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-var CARDS=[
-  {type:'clipboard',color:'gold',title:'χ = ∭(G·M·E·S·T·K·R·Q·F·C) dxdydt',preview:'Master Equation — integrates all ten domains across physical and spiritual reality.',meta:'2m ago',btns:[{l:'Copy',c:'prim'},{l:'Edit'},{l:'Tag'},{l:'🤖 Ask AI'}]},
-  {type:'snippet',color:'blue',title:'System prompt — Theophysics context v4.1',preview:'You are operating within the Theophysics framework. Physics and theology are dual projections of a single coherent reality. The Ten Laws are the constitutional axioms.',meta:'Yesterday',btns:[{l:'Copy',c:'c-blue'},{l:'Edit'},{l:'Pin'},{l:'Delete'}]},
-  {type:'prompt',color:'purple',title:'Deep Laws extraction prompt',preview:'Run /DEEPER then /INTEGRATE on this passage and identify if it maps to any of the Ten Laws. Return: law number, confidence, cross-domain implications.',meta:'Mar 9',btns:[{l:'Use Now',c:'c-purple'},{l:'Copy'},{l:'Edit'}]},
-  {type:'bookmark',color:'green',title:'PEAR Lab replication archive',preview:'pearlab.icrl.org — Mind-matter interaction studies. 2.5M trials, 6σ statistical significance.',meta:'Mar 8',btns:[{l:'Open',c:'c-green'},{l:'Copy URL'},{l:'🤖 Ingest'}]},
-  {type:'clipboard',color:'gold',title:'Nucleation Thesis v2 — draft para',preview:'The universe is not an accident of entropy but a nucleation event precipitated by a coherence field exceeding critical threshold Gc at t=0.',meta:'1h ago',btns:[{l:'Copy',c:'prim'},{l:'Edit'},{l:'Tag'},{l:'🤖 Ask AI'}]},
-  {type:'prompt',color:'purple',title:'/PROBE+/CHAIN — Trinity collapse mechanism',preview:'Father/Son/Spirit = Potential/Structure/Actualization. Run probe sequence on Trinity isomorphism and chain through to wavefunction collapse. Feb 26 session.',meta:'Mar 7',btns:[{l:'Use Now',c:'c-purple'},{l:'Copy'},{l:'Edit'}]},
-  {type:'snippet',color:'blue',title:'Moral Conservation Equation — Papers 9–10',preview:'dE/dt = -αD(t) + βC(Ψ,χ) — C = Christ alignment, β = grace. Christian solution to Moral Conservation.',meta:'Mar 6',btns:[{l:'Copy',c:'c-blue'},{l:'Edit'},{l:'Pin'}]},
-  {type:'bookmark',color:'green',title:'GCP — Global Consciousness Project',preview:'noosphere.princeton.edu — 325+ replicas, 6σ significance through 2010. 9/11 and disaster events show coherence spikes.',meta:'Mar 5',btns:[{l:'Open',c:'c-green'},{l:'🤖 Ingest'}]},
-  {type:'clipboard',color:'gold',title:'Adversary Thread — Ratchet Pattern',preview:'Century of Constitutional erosion maps onto domain attack sequence. Five crisis windows. Crisis > power > crisis passes > power remains. Both readings valid.',meta:'Mar 4',btns:[{l:'Copy',c:'prim'},{l:'Tag'},{l:'🤖 Ask AI'}]},
-  {type:'snippet',color:'blue',title:'BAES Intake Prompt — Academic Paper',preview:'You are evaluating a paper for structural quality, claim validity, and falsifiability. Score: are claims testable? Falsification criteria provided?',meta:'Mar 3',btns:[{l:'Copy',c:'c-blue'},{l:'Use Now'},{l:'Edit'}]}
-];
+/* ══════════════════════════════════════════════════════════
+   DATA LAYER — reads from shared localStorage keys
+   ══════════════════════════════════════════════════════════ */
+function loadClips(){ try { return JSON.parse(localStorage.getItem('pof2828_clips') || '[]'); } catch(e) { return []; } }
+function loadPrompts(){ try { return JSON.parse(localStorage.getItem('pof2828_prompts') || '[]'); } catch(e) { return []; } }
+function loadBookmarks(){ try { return JSON.parse(localStorage.getItem('pof2828_bookmarks') || '[]'); } catch(e) { return []; } }
+function loadNotes(){ try { return JSON.parse(localStorage.getItem('pof2828_notes') || '[]'); } catch(e) { return []; } }
+
+function saveClips(data){ localStorage.setItem('pof2828_clips', JSON.stringify(data)); }
+
+function getAllItems(){
+  var items = [];
+  loadClips().forEach(function(c){
+    items.push({ source:'clip', color:'gold', id:c.id, title:(c.content||'').split('\n')[0].substring(0,80)||'Untitled', preview:(c.content||'').split('\n').slice(1).join(' ').substring(0,120), content:c.content||'', meta:timeAgo(c.ts||c.created_at), ts:c.ts||c.created_at||'', pinned:!!c.pinned, tags:c.tags||[], raw:c });
+  });
+  loadPrompts().forEach(function(p){
+    items.push({ source:'prompt', color:'purple', id:p.id, title:p.name||'Untitled', preview:(p.content||'').substring(0,120), content:p.content||'', meta:timeAgo(p.created_at), ts:p.created_at||'', pinned:false, tags:p.tags||[], category:p.category, raw:p });
+  });
+  loadBookmarks().forEach(function(b){
+    items.push({ source:'bookmark', color:'green', id:b.id, title:b.title||'Untitled', preview:b.url+(b.notes?' — '+b.notes:''), content:b.url||'', meta:timeAgo(b.created_at), ts:b.created_at||'', pinned:false, tags:b.tags||[], url:b.url, raw:b });
+  });
+  loadNotes().forEach(function(n){
+    items.push({ source:'note', color:'blue', id:n.id, title:n.title||'Untitled', preview:(n.content||'').substring(0,120), content:n.content||'', meta:timeAgo(n.updated_at||n.created_at), ts:n.updated_at||n.created_at||'', pinned:!!n.pinned, tags:n.tags||[], raw:n });
+  });
+  // Sort by timestamp descending
+  items.sort(function(a,b){ return (b.ts||'').localeCompare(a.ts||''); });
+  return items;
+}
+
+function esc(s){ if(!s) return ''; var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function timeAgo(iso){ if(!iso) return ''; var s=(Date.now()-new Date(iso).getTime())/1000; if(s<60) return 'now'; if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; if(s<2592000) return Math.floor(s/86400)+'d'; return Math.floor(s/2592000)+'mo'; }
+
+var activeFilter='all', searchQ='';
+var ALL_ITEMS = [];
+
+function refreshData(){
+  ALL_ITEMS = getAllItems();
+  updateBadges();
+  renderCards();
+  renderPinnedItems();
+  updateStats();
+}
+
+function updateBadges(){
+  var clips=loadClips(), prompts=loadPrompts(), bookmarks=loadBookmarks(), notes=loadNotes();
+  var total=clips.length+prompts.length+bookmarks.length+notes.length;
+  var pinned=clips.filter(function(c){return c.pinned;}).length + notes.filter(function(n){return n.pinned;}).length;
+  var el;
+  el=document.getElementById('badge-all'); if(el) el.textContent=total;
+  el=document.getElementById('badge-pinned'); if(el) el.textContent=pinned;
+  el=document.getElementById('badge-clip'); if(el) el.textContent=clips.length;
+  el=document.getElementById('badge-prompt'); if(el) el.textContent=prompts.length;
+  el=document.getElementById('badge-bookmark'); if(el) el.textContent=bookmarks.length;
+  el=document.getElementById('badge-note'); if(el) el.textContent=notes.length;
+}
+
+function updateStats(){
+  var clips=loadClips(), prompts=loadPrompts(), bookmarks=loadBookmarks(), notes=loadNotes();
+  var total=clips.length+prompts.length+bookmarks.length+notes.length;
+  var pinned=clips.filter(function(c){return c.pinned;}).length + notes.filter(function(n){return n.pinned;}).length;
+  var el;
+  el=document.getElementById('stat-total'); if(el) el.textContent=total;
+  el=document.getElementById('stat-pinned'); if(el) el.textContent=pinned;
+  el=document.getElementById('cm-count'); if(el) el.textContent='#'+total;
+}
+
+function renderPinnedItems(){
+  var el=document.getElementById('pinned-items');
+  if(!el) return;
+  var pinned=ALL_ITEMS.filter(function(i){ return i.pinned; }).slice(0,5);
+  if(!pinned.length){ el.innerHTML='<div style="font-size:10px;color:var(--muted2)">No pinned items yet.</div>'; return; }
+  el.innerHTML=pinned.map(function(item){
+    var ico=item.source==='clip'?'📋':item.source==='prompt'?'💬':item.source==='bookmark'?'🔖':'📝';
+    return '<div class="pin-item" onclick="copyItemContent(\''+item.source+'\',\''+item.id+'\')"><div class="pi-ico">'+ico+'</div><div><div class="pi-txt">'+esc(item.title)+'</div><div class="pi-meta">'+item.source+' · pinned</div></div></div>';
+  }).join('');
+}
 
 var PUBLICATIONS=[
   {num:'01',title:'Nucleation Thesis — The First Law',status:'inprog',label:'IN PROGRESS'},
@@ -620,24 +694,84 @@ var SOCIAL_PLATFORMS=[
   {name:'Gmail',emoji:'📧',home:false}
 ];
 
-var activeFilter='all', searchQ='';
-
 function renderCards(){
   var c=document.getElementById('card-container');
   if(!c) return;
-  if(activeFilter==='agent'){
-    c.innerHTML='<div style="text-align:center;padding:38px 18px;"><div style="font-size:34px;margin-bottom:10px">🤖</div><div style="font-size:14px;font-weight:600;color:var(--purple);margin-bottom:7px">Logos Agent</div><div style="font-size:12px;color:var(--muted);margin-bottom:18px">Persistent AI collaborator. R2 retrieval · clipboard context · synthesis workflows.</div><div style="display:flex;flex-direction:column;gap:6px;max-width:320px;margin:0 auto;"><button class="cb" style="padding:9px;background:var(--purple-dim);border-color:rgba(155,127,232,.28);color:var(--purple);" onclick="toast(\'Starting clipboard synthesis…\')">🔬 Synthesize clipboard context</button><button class="cb" style="padding:9px;" onclick="toast(\'Querying R2 vault…\')">📚 Query vault (R2 · 1,300 papers)</button><button class="cb" style="padding:9px;" onclick="toast(\'Launching web research…\')">🌐 Agentic web research</button><button class="cb" style="padding:9px;" onclick="toast(\'Running contradiction scan…\')">⚡ Contradiction scan — Ten Laws</button><button class="cb" style="padding:9px;" onclick="toast(\'Running BAES evaluation…\')">⚖️ Run BAES evaluation</button></div></div>';
-    return;
-  }
-  var filtered=CARDS.filter(function(card){
-    var mt=activeFilter==='all'||activeFilter===card.type||activeFilter==='pinned';
-    var ms=!searchQ||card.title.toLowerCase().indexOf(searchQ.toLowerCase())>-1||card.preview.toLowerCase().indexOf(searchQ.toLowerCase())>-1;
-    return mt&&ms;
+  var filtered=ALL_ITEMS.filter(function(item){
+    var mt = activeFilter==='all' || activeFilter===item.source || (activeFilter==='pinned' && item.pinned);
+    var ms = !searchQ || item.title.toLowerCase().indexOf(searchQ.toLowerCase())>-1 || item.preview.toLowerCase().indexOf(searchQ.toLowerCase())>-1 || item.tags.join(' ').toLowerCase().indexOf(searchQ.toLowerCase())>-1;
+    return mt && ms;
   });
-  if(!filtered.length){c.innerHTML='<div style="text-align:center;padding:38px;color:var(--muted);font-size:13px">No items match.</div>';return;}
-  c.innerHTML=filtered.map(function(card,i){
-    return '<div class="cc '+card.color+'" style="animation-delay:'+i*30+'ms"><div class="cc-top"><div class="cc-title '+card.color+'">'+card.title+'</div><div class="cc-tag '+card.color+'">'+card.type+'</div></div><div class="cc-pre">'+card.preview+'</div><div class="cc-foot"><div class="cc-btns">'+card.btns.map(function(b){return '<button class="cb '+(b.c||'')+'" onclick="toast(\''+b.l+'\')">'+b.l+'</button>';}).join('')+'</div><div class="cc-meta">'+card.meta+'</div></div></div>';
+  // Update title
+  var titles={all:'All Items',pinned:'Pinned',clip:'Clips',prompt:'Prompts',bookmark:'Bookmarks',note:'Notes'};
+  var ct=document.getElementById('cm-title');
+  if(ct) ct.innerHTML=esc(titles[activeFilter]||activeFilter)+' <span class="cm-count">#'+filtered.length+'</span>';
+
+  if(!filtered.length){c.innerHTML='<div style="text-align:center;padding:38px;color:var(--muted);font-size:13px">'+(searchQ?'No items match.':'No items yet. Add data via the standalone tools or click + New Clip.')+'</div>';return;}
+  c.innerHTML=filtered.map(function(item,i){
+    var sourceLabel = item.source==='clip'?'clip':item.source==='prompt'?'prompt':item.source==='bookmark'?'bookmark':'note';
+    var tagHtml = item.tags.slice(0,3).map(function(t){ return '<span style="font-family:monospace;font-size:8px;padding:1px 5px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);margin-right:3px;">'+esc(t)+'</span>'; }).join('');
+    var copyLabel = item.source==='bookmark'?'Open':'Copy';
+    var copyClass = item.source==='bookmark'?'c-green':'prim';
+    return '<div class="cc '+item.color+'" style="animation-delay:'+i*20+'ms">'+
+      '<div class="cc-top"><div class="cc-title '+item.color+'">'+esc(item.title)+'</div><div class="cc-tag '+item.color+'">'+sourceLabel+'</div></div>'+
+      '<div class="cc-pre">'+esc(item.preview)+'</div>'+
+      (tagHtml?'<div style="margin-bottom:6px;">'+tagHtml+'</div>':'')+
+      '<div class="cc-foot"><div class="cc-btns">'+
+        '<button class="cb '+copyClass+'" onclick="event.stopPropagation();copyItemContent(\''+item.source+'\',\''+item.id+'\')">'+copyLabel+'</button>'+
+        '<button class="cb" onclick="event.stopPropagation();deleteItem(\''+item.source+'\',\''+item.id+'\')">Delete</button>'+
+      '</div><div class="cc-meta">'+item.meta+'</div></div></div>';
   }).join('');
+}
+
+function copyItemContent(source,id){
+  var item = ALL_ITEMS.find(function(i){ return i.source===source && i.id===id; });
+  if(!item) return;
+  if(source==='bookmark' && item.url){ window.open(item.url,'_blank'); toast('Opening link…'); return; }
+  navigator.clipboard.writeText(item.content).then(function(){ toast('Copied!'); }).catch(function(){
+    var ta=document.createElement('textarea'); ta.value=item.content; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
+  });
+}
+
+function deleteItem(source,id){
+  if(!confirm('Delete this item?')) return;
+  if(source==='clip'){
+    var clips=loadClips().filter(function(c){ return c.id!==id; });
+    saveClips(clips);
+  } else if(source==='prompt'){
+    var prompts=loadPrompts().filter(function(p){ return p.id!==id; });
+    localStorage.setItem('pof2828_prompts', JSON.stringify(prompts));
+  } else if(source==='bookmark'){
+    var bookmarks=loadBookmarks().filter(function(b){ return b.id!==id; });
+    localStorage.setItem('pof2828_bookmarks', JSON.stringify(bookmarks));
+  } else if(source==='note'){
+    var notes=loadNotes().filter(function(n){ return n.id!==id; });
+    localStorage.setItem('pof2828_notes', JSON.stringify(notes));
+  }
+  refreshData();
+  toast('Deleted');
+}
+
+/* ── New Clip Modal ── */
+function openNewClipModal(){
+  document.getElementById('clipModalTitle').textContent='NEW CLIP';
+  document.getElementById('clipEditId').value='';
+  document.getElementById('clipContent').value='';
+  document.getElementById('clipTags').value='';
+  document.getElementById('clipModalBg').style.display='flex';
+  setTimeout(function(){ document.getElementById('clipContent').focus(); },80);
+}
+function closeClipModal(){ document.getElementById('clipModalBg').style.display='none'; }
+function saveNewClip(){
+  var content=document.getElementById('clipContent').value.trim();
+  if(!content){ toast('Content required'); return; }
+  var tags=document.getElementById('clipTags').value.split(',').map(function(t){return t.trim();}).filter(Boolean);
+  var clips=loadClips();
+  clips.unshift({ id:'c'+Date.now().toString(36)+Math.random().toString(36).substr(2,5), content:content, tags:tags, slot:null, pinned:false, ts:new Date().toISOString() });
+  saveClips(clips);
+  closeClipModal();
+  refreshData();
+  toast('Clip added');
 }
 
 function filterType(type,el,ac){
@@ -645,9 +779,6 @@ function filterType(type,el,ac){
   var items=document.querySelectorAll('.cs-item');
   for(var i=0;i<items.length;i++) items[i].className='cs-item';
   el.className='cs-item '+(ac||'a-gold');
-  var titles={all:'All Items',pinned:'Pinned',clipboard:'Clipboard',snippet:'Snippets',prompt:'Prompts',bookmark:'Bookmarks',agent:'AI Agent'};
-  var ct=document.getElementById('cm-title');
-  if(ct) ct.innerHTML=(titles[type]||type)+' <span class="cm-count">#'+(type==='all'?142:CARDS.filter(function(c){return c.type===type;}).length)+'</span>';
   renderCards();
 }
 
@@ -831,7 +962,7 @@ function updateClock(){
   if(el) el.textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 
-renderCards();
+refreshData();
 renderPubs();
 renderBAES();
 renderQueue();
@@ -842,6 +973,8 @@ renderChannels();
 renderSwarm();
 setInterval(updateClock,1000);
 updateClock();
+// Re-sync from localStorage every 2 seconds (so edits in standalone tools appear)
+setInterval(refreshData, 2000);
 </script>
 </body>
 </html>
