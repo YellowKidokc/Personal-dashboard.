@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theophysics Hub · POF 2828</title>
+<style>
+:root{--bg:#0B0C0F;--surface:#11131A;--surface2:#181B26;--border:rgba(244,246,255,.08);--text:#F4F6FF;--muted:#8A8F9E;--gold:#F2C94C;--blue:#4F8EF7;--green:#4ECB71;--purple:#9B7FE8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column}
+.top{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;padding:0 14px}
+.brand{font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:var(--gold)}
+.nav{display:flex;gap:5px}.tab{border:1px solid transparent;background:transparent;color:var(--muted);padding:6px 10px;border-radius:7px;cursor:pointer}.tab.active{color:var(--gold);border-color:rgba(242,201,76,.35);background:rgba(242,201,76,.1)}
+.view{display:none;flex:1;min-height:0}.view.active{display:flex}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;overflow:auto;width:100%}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px}.label{font:10px monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.list{margin-top:6px;display:flex;flex-direction:column;gap:7px}.item{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center}
+.inp,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font:inherit}
+.btn{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:7px 11px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--gold);color:#111;border-color:var(--gold)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:980px){.grid,.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">POF 2828 · THEOPHYSICS HUB</div>
+  <div class="nav" id="nav"></div>
+</div>
+
+<section id="v-knowledge" class="view active"><div class="grid" id="knowledgeGrid"></div></section>
+<section id="v-clipboard" class="view"><div class="grid" id="clipboardGrid"></div></section>
+<section id="v-functions" class="view"><div class="grid" id="functionsGrid"></div></section>
+<section id="v-notes" class="view"><div class="grid" id="notesGrid"></div></section>
+<section id="v-settings" class="view"><div class="grid" id="settingsGrid"></div></section>
+
+<script>
+const tabs=[['knowledge','Knowledge'],['clipboard','Clipboard'],['functions','Functions'],['notes','Notes'],['settings','Settings']];
+const get=(k,f=[])=>JSON.parse(localStorage.getItem(k)||JSON.stringify(f));
+const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const clips=()=>get('pof2828_clips');
+const prompts=()=>get('pof2828_prompts');
+const bookmarks=()=>get('pof2828_bookmarks');
+const notes=()=>get('pof2828_notes');
+
+function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('v-'+v).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.v===v));if(v==='knowledge')renderKnowledge();if(v==='clipboard')renderClipboard();if(v==='functions')renderFunctions();if(v==='notes')renderNotes();if(v==='settings')renderSettings();}
+document.getElementById('nav').innerHTML=tabs.map(([id,name],i)=>`<button class='tab ${i===0?'active':''}' data-v='${id}' onclick="switchView('${id}')">${name}</button>`).join('');
+
+function renderKnowledge(){
+  const n=notes(), b=bookmarks();
+  document.getElementById('knowledgeGrid').innerHTML=`
+    <div class='card'><div class='label'>Research Threads</div><div class='list'>${b.slice(0,8).map(x=>`<div class='item'><strong>${esc(x.title||'Untitled')}</strong><div style='color:var(--muted);font-size:11px'>${esc(x.category||'General')}</div></div>`).join('')||'<div class="item">No bookmarks yet.</div>'}</div></div>
+    <div class='card'><div class='label'>Breakthrough Feed</div><div class='list'>${n.slice(0,8).map(x=>`<div class='item'><strong>${esc(x.title||'Untitled')}</strong><div style='color:var(--muted);font-size:11px'>${new Date(x.updated_at||x.created_at||Date.now()).toLocaleString()}</div></div>`).join('')||'<div class="item">No notes yet.</div>'}</div></div>
+    <div class='card'><div class='label'>Publication Tracker</div><div class='item'>Drafts: ${n.length}</div><div class='item' style='margin-top:7px'>References: ${b.length}</div></div>
+    <div class='card'><div class='label'>Concept Graph</div><div class='item'>Placeholder ready for D1 graph tab integration.</div></div>`;
+}
+function renderClipboard(){
+  const c=clips();
+  document.getElementById('clipboardGrid').innerHTML=`<div class='card'><div class='label'>Clipboard (localStorage: pof2828_clips)</div><div class='list'>${c.slice(0,20).map(x=>`<div class='item'><strong>${esc(x.title||'Clip')}</strong><div style='font-size:11px;color:var(--muted)'>${esc((x.content||'').slice(0,150))}</div></div>`).join('')||'<div class="item">No clips yet.</div>'}</div></div>`;
+}
+function renderFunctions(){
+  const p=prompts(), b=bookmarks();
+  document.getElementById('functionsGrid').innerHTML=`
+  <div class='card'><div class='label'>Prompt Picker Panel</div><div class='list'>${p.slice(0,10).map(x=>`<div class='item'><strong>${esc(x.name)}</strong><div style='font-size:11px;color:var(--muted)'>${esc(x.category||'Custom')}</div></div>`).join('')||'<div class="item">No prompts yet.</div>'}</div></div>
+  <div class='card'><div class='label'>Research Links Panel</div><div class='list'>${b.slice(0,10).map(x=>`<div class='item'><strong>${esc(x.title)}</strong><div style='font-size:11px;color:var(--muted)'>${esc(x.url||'')}</div></div>`).join('')||'<div class="item">No links yet.</div>'}</div></div>
+  <div class='card'><div class='label'>Ingest Placeholder</div><div class='item'>Drop zone and queue integrates in Phase 3.</div></div>
+  <div class='card'><div class='label'>Infrastructure Status</div><div class='item'>Gateway: ${localStorage.getItem('pof2828_gateway_url')||'not configured'}</div></div>`;
+}
+function renderNotes(){
+  const n=notes();
+  document.getElementById('notesGrid').innerHTML=`<div class='card'><div class='label'>Notes (localStorage: pof2828_notes)</div><div class='list'>${n.slice(0,20).map(x=>`<div class='item'><strong>${esc(x.title||'Untitled')}</strong><div style='font-size:11px;color:var(--muted)'>${esc((x.content||'').slice(0,170))}</div></div>`).join('')||'<div class="item">No notes yet.</div>'}</div></div>`;
+}
+function renderSettings(){
+  const grid=document.getElementById('settingsGrid');
+  grid.innerHTML=`<div class='card'><div class='label'>Data Bundle</div><div class='two'><button class='btn primary' onclick='exportAll()'>Export All</button><button class='btn' onclick='importAll()'>Import All</button></div><div class='item' style='margin-top:8px'>Includes clips, prompts, bookmarks, and notes.</div></div>
+  <div class='card'><div class='label'>Gateway URL</div><div class='kv'><span>URL</span><input id='gateway' class='inp' value='${esc(localStorage.getItem('pof2828_gateway_url')||'')}' placeholder='https://theophysics-gateway.workers.dev'></div><div style='margin-top:8px'><button class='btn' onclick='saveGateway()'>Save Gateway</button></div></div>
+  <div class='card'><div class='label'>Theme Preferences</div><div class='item'>Theme toggle placeholder for Phase 2 expansion.</div></div>`;
+}
+function saveGateway(){localStorage.setItem('pof2828_gateway_url',document.getElementById('gateway').value.trim());alert('Gateway saved');renderFunctions();}
+function exportAll(){const bundle={version:'1.0',exported_at:new Date().toISOString(),clips:clips(),prompts:prompts(),bookmarks:bookmarks(),notes:notes()};const b=new Blob([JSON.stringify(bundle,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`theophysics_hub_bundle_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);}
+function importAll(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const b=JSON.parse(await f.text());if(b.clips)set('pof2828_clips',b.clips);if(b.prompts)set('pof2828_prompts',b.prompts);if(b.bookmarks)set('pof2828_bookmarks',b.bookmarks);if(b.notes)set('pof2828_notes',b.notes);alert('Bundle imported');switchView('knowledge');}catch{alert('Invalid bundle')}};i.click();}
+function esc(s=''){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+renderKnowledge();
+</script>
+</body>
+</html>
